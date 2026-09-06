@@ -1,9 +1,17 @@
 import Link from 'next/link';
+import React from 'react';
 import { Card, Badge, Button } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { Wallet, Shield, Award, Users, FileText, Zap, ArrowRight, CheckCircle2, Lock, Sparkles, Terminal, Copy } from 'lucide-react';
 
-const features = [
+const features: Array<{
+  icon: React.ComponentType<{ className?: string }>;
+  tag: string;
+  title: string;
+  description: string;
+  href: string;
+  badge?: string;
+}> = [
   {
     icon: Shield,
     tag: 'W3C Standard',
@@ -22,8 +30,9 @@ const features = [
     icon: Award,
     tag: 'Spore Protocol',
     title: 'DOB Certificate Issuance',
-    description: 'Mint immutable, portable diplomas and certificates with embedded DNA schemas directly to recipient CKB addresses.',
+    description: 'Mint immutable, portable diplomas to CKB addresses or did:ckb: identifiers. Certificates survive wallet rotations.',
     href: '/certificates/issue',
+    badge: 'DID',
   },
   {
     icon: Zap,
@@ -245,11 +254,18 @@ export default function Home() {
                   {/* Header: Icon + Category Tag */}
                   <div className="flex items-center justify-between mb-5">
                     <div className="w-12 h-12 rounded-xl bg-midnight-plum border border-fog-line/15 group-hover:border-lavender-spark/40 flex items-center justify-center transition-colors duration-200">
-                      <feature.icon className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" strokeWidth={1.5} />
+                      <feature.icon className="w-5 h-5 text-bone-white group-hover:text-lavender-spark transition-colors" />
                     </div>
-                    <span className="text-[11px] font-mono text-mid-ash tracking-wide px-2.5 py-1 rounded-full bg-midnight-plum border border-fog-line/10">
-                      {feature.tag}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-mid-ash tracking-wide px-2.5 py-1 rounded-full bg-midnight-plum border border-fog-line/10">
+                        {feature.tag}
+                      </span>
+                      {feature.badge && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-400">
+                          {feature.badge}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Title & Body */}

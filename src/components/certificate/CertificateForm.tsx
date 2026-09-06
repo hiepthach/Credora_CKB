@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/ui';
 import type { CertificateLayout, CertificateTheme } from '@/types';
-import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles, Loader2, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
 import { cn } from '@/utils';
 import { CERTIFICATE_PRESETS } from '@/components/template';
 import { isDidInput } from '@/lib/did';
@@ -557,6 +557,19 @@ export function CertificateForm({
             Optional custom headline for the certificate (e.g. &quot;HONORARY DIPLOMA&quot;, &quot;CERTIFICATE OF ACHIEVEMENT&quot;)
           </p>
         </div>
+      </div>
+
+      {/* CKB Capacity Info */}
+      <div className="bg-muted/30 rounded-lg p-3 border border-fog-line/20">
+        <div className="flex items-center gap-2 text-sm">
+          <Lock className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">
+            <span className="font-medium text-foreground">200 CKB</span> will be locked on-chain
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          Capacity is reclaimable by melting the certificate
+        </p>
       </div>
 
       <div className="flex gap-3 pt-5 border-t border-fog-line/10">

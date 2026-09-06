@@ -1,6 +1,5 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
 import { formatRecipientIdentifier } from '@/lib/did';
 
 interface DidBadgeProps {
@@ -21,14 +20,6 @@ export function DidBadge({ id, className = '' }: DidBadgeProps) {
       <span className="text-xs text-mid-ash font-mono">
         {truncatedDid}
       </span>
-      <a
-        href={`https://vellum-lyart.vercel.app/did/${id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-mid-ash hover:text-lavender-spark transition-colors"
-      >
-        <ExternalLink className="h-3 w-3" />
-      </a>
     </div>
   );
 }
