@@ -22,7 +22,6 @@ import {
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
 import { PaperCertificate } from './PaperCertificate';
-import { DidBadge } from './DidBadge';
 
 interface CertificateDetailProps {
   certificate: CertificateDNA;
@@ -206,8 +205,21 @@ export function CertificateDetail({
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-mid-ash" />
                 <span className="text-bone-white font-medium">{display.recipient}</span>
-                <DidBadge id={subject.id || ''} />
               </div>
+              {subject.id && (
+                <div className="flex items-center gap-3">
+                  <span className="w-4 h-4 flex items-center justify-center text-xs text-mid-ash">🔗</span>
+                  <span className="text-mid-ash">DID:</span>
+                  <span className="text-bone-white font-mono text-xs flex-1 truncate">{subject.id}</span>
+                  <button
+                    onClick={() => copyToClipboard(subject.id || '')}
+                    className="text-mid-ash hover:text-lavender-spark transition-colors"
+                    title="Copy DID"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               {subject.grade && (
                 <div className="flex items-center gap-3">
                   <span className="w-4 h-4 flex items-center justify-center text-xs text-mid-ash">🎓</span>

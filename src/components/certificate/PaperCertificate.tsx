@@ -3,7 +3,6 @@
 import React from 'react';
 import type { CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 import { formatDate, truncateAddress, cn } from '@/utils';
-import { DidBadge } from './DidBadge';
 
 export interface PaperCertificateProps {
   certificate: CertificateDNA;
@@ -193,7 +192,6 @@ export function PaperCertificate({
           <h3 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 mb-2 font-serif">
             {recipientName}
           </h3>
-          {subject.id && <DidBadge id={subject.id} className="justify-center mb-2" />}
           <p className="text-sm text-gray-500 font-serif italic">
             has successfully fulfilled all requirements and completed
           </p>
