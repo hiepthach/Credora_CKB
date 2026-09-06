@@ -104,12 +104,12 @@ src/
   - Batch issuance supports mixed DID/address recipients
 
 ### Quality & Polish (Week 12)
-- [ ] Error Handling
-- [ ] Loading States (Spinner component)
-- [ ] Empty States (EmptyState component)
-- [x] Unit Tests (270 tests passing)
-- [ ] Integration Tests
-- [ ] Demo/Screencast
+- [x] Error Handling (Error boundary, Alert component, CKB RPC error formatter)
+- [x] Loading States (Spinner component, route loading fallbacks)
+- [x] Empty States (EmptyState component across all views)
+- [x] Unit Tests (280+ tests passing)
+- [x] Integration Tests (Lifecycle, batch issuance flow, DID resolution)
+- [x] Demo/Screencast ([Demo Walkthrough Script](docs/DEMO_SCRIPT.md))
 
 ## DID (did:ckb) Support
 
@@ -161,19 +161,21 @@ npm run test:coverage # Run tests with coverage
 
 ## Testing
 
-Run unit tests:
+Run unit & integration tests (289 tests passing across 34 test files):
 
 ```bash
 npm test
+# or run once:
+npm run test:run
 ```
 
 Test coverage includes:
-- UI Components (Badge, Button, Card, Input)
-- Credentials (Encoder, Decoder, Issuer, Verifier)
+- UI Components (Alert, Badge, Button, Card, EmptyState, Input, Spinner)
+- Credentials (Encoder, Decoder, Issuer, Verifier, Template Types)
 - Services (Template, Cluster)
-- Batch Issuance
-- Share Utility
-- DID Resolution & Integration
+- Batch Issuance (Validation, preview, and execution flow)
+- Utilities & Errors (Share utility, CKB RPC error formatting)
+- Integration Tests (Certificate lifecycle, batch issuance flow, and DID integration)
 
 ## Resources
 

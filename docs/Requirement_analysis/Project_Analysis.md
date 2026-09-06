@@ -429,13 +429,13 @@ graph TB
 ### 6.3 Week 12 - Polish (Adjusted)
 
 **Features**:
-- [ ] Error handling
-- [ ] Loading states
-- [ ] Empty states
-- [ ] Unit tests
-- [ ] Integration tests
-- [ ] README
-- [ ] Demo
+- [x] Error handling
+- [x] Loading states
+- [x] Empty states
+- [x] Unit tests
+- [x] Integration tests
+- [x] README
+- [x] Demo
 
 **NOT in Week 12**:
 - Analytics Dashboard
@@ -565,6 +565,13 @@ interface CertificateDNA {
 - Batch issuance
 - Expiration display
 - Revocation
+
+**Polish & Quality (Week 12)**:
+- Error handling & CKB RPC error formatting
+- Route and component loading states
+- Actionable empty states
+- Unit & integration testing (289 tests)
+- Production README & demo walkthrough
 
 **Future**:
 - Renewal

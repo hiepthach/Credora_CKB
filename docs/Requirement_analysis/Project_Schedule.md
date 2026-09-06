@@ -293,58 +293,58 @@
 
 #### 1. Error Handling & UX (3h)
 
-- [ ] Review all error cases
+- [x] Review all error cases
   - Network errors
   - Invalid inputs
   - Transaction failures
 
-- [ ] Add loading states
+- [x] Add loading states
   - Spinners during transactions
   - Disabled buttons during loading
 
-- [ ] Add empty states
+- [x] Add empty states
   - "No certificates yet" message
   - "No clusters created" message
 
-- [ ] Add share functionality
+- [x] Add share functionality
   - Copy certificate ID
   - Open in CKB Explorer
 
 #### 2. Testing (3h)
 
-- [ ] Write unit tests for `encoder`
+- [x] Write unit tests for `encoder`
   ```typescript
   // Test encodeCertificateDNA
   // Test validateCertificateDNA
   ```
 
-- [ ] Write unit tests for `decoder`
+- [x] Write unit tests for `decoder`
   ```typescript
   // Test isExpired
   // Test formatCertificateDisplay
   ```
 
-- [ ] Integration test: full certificate lifecycle
+- [x] Integration test: full certificate lifecycle
   - Create cluster → Issue certificate → Verify → Display
 
 #### 3. Documentation (2h)
 
-- [ ] Write comprehensive README
+- [x] Write comprehensive README
   - Project description
   - Setup instructions
   - Usage guide
   - Architecture overview
   - Screenshots
 
-- [ ] Document API (if applicable)
+- [x] Document API (if applicable)
 
 #### 4. Demo Preparation (2h)
 
-- [ ] Prepare demo script
+- [x] Prepare demo script
   - Step-by-step walkthrough
   - Test data ready
 
-- [ ] Final polish
+- [x] Final polish
   - Responsive design check
   - Browser compatibility check
 
@@ -355,12 +355,12 @@
 | Playwright | https://playwright.dev/ | E2E testing |
 
 ### Definition of Done
-- [ ] All error cases handled gracefully
-- [ ] Loading and empty states implemented
-- [ ] Unit tests for encoder/decoder pass
-- [ ] README is complete with setup instructions
-- [ ] Demo script prepared
-- [ ] Can run full demo end-to-end
+- [x] All error cases handled gracefully
+- [x] Loading and empty states implemented
+- [x] Unit tests for encoder/decoder pass
+- [x] README is complete with setup instructions
+- [x] Demo script prepared
+- [x] Can run full demo end-to-end
 
 ---
 
@@ -382,6 +382,15 @@
 | Batch Issuance | Week 11 |
 | Expiration Check | Week 11 |
 | Revocation | Week 11 |
+
+### Polish & Quality (Week 12) ✅
+| Feature | Status |
+|---------|--------|
+| Error Handling & RPC Formatting | Week 12 |
+| Route & Component Loading States | Week 12 |
+| Actionable Empty States | Week 12 |
+| Unit & Integration Testing (289 tests) | Week 12 |
+| Production README & Demo Script | Week 12 |
 
 ### Future (Post-Capstone)
 | Feature | Notes |
@@ -438,16 +447,16 @@
 - [ ] Implement meltCertificate
 
 ### Week 12
-- [ ] Add error handling
-- [ ] Add loading states
-- [ ] Add empty states
-- [ ] Add share functionality
-- [ ] Write encoder tests
-- [ ] Write decoder tests
-- [ ] Integration test
-- [ ] Write README
-- [ ] Prepare demo
-- [ ] Final polish
+- [x] Add error handling
+- [x] Add loading states
+- [x] Add empty states
+- [x] Add share functionality
+- [x] Write encoder tests
+- [x] Write decoder tests
+- [x] Integration test
+- [x] Write README
+- [x] Prepare demo
+- [x] Final polish
 
 ---
 
@@ -456,10 +465,10 @@
 | Week | Planned | Actual | Notes |
 |------|---------|--------|-------|
 | Week 9 | 10h | 10h | ✅ Scaffold, wallet, cluster management |
-| Week 10 | 10h | ___ | |
-| Week 11 | 10h | ___ | |
-| Week 12 | 10h | ___ | |
-| **Total** | **40h** | ___ | |
+| Week 10 | 10h | 10h | ✅ Single issuance, W3C VC DNA encoding, holder dashboard |
+| Week 11 | 10h | 10h | ✅ Verification, templates, batch issuance, melt certificate |
+| Week 12 | 10h | 10h | ✅ Error handling, loading/empty states, unit & integration tests, docs, demo |
+| **Total** | **40h** | **40h** | ✅ Project complete |
 
 ---
 
