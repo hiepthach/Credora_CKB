@@ -1,4 +1,4 @@
-# CKB Credential Registry
+# Credora (CKB Credential Registry)
 
 A verifiable credentials system built on Nervos CKB using the Spore Protocol. Issue, manage, and verify course completion certificates as on-chain credentials.
 
@@ -109,7 +109,7 @@ src/
 - [x] Empty States (EmptyState component across all views)
 - [x] Unit Tests (280+ tests passing)
 - [x] Integration Tests (Lifecycle, batch issuance flow, DID resolution)
-- [x] Demo/Screencast ([Demo Walkthrough Script](docs/DEMO_SCRIPT.md))
+- [] Demo/Screencast
 
 ## DID (did:ckb) Support
 
