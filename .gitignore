@@ -45,3 +45,6 @@ Thumbs.db
 .claude/
 .codegraph/
 CLAUDE.md
+GEMINI.md
+DESIGN.md
+.agents/
