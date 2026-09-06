@@ -7,7 +7,8 @@ A verifiable credentials system built on Nervos CKB using the Spore Protocol. Is
 - **Blockchain**: Nervos CKB
 - **Credential Standard**: W3C Verifiable Credentials
 - **Storage**: Spore Protocol (DOB/Cluster cells)
-- **SDK**: CCC SDK (@ckb-ccc/core, @ckb-ccc/connector-react)
+- **SDK**: CCC SDK (@ckb-ccc/core, @ckb-ccc/connector-react, @ckb-ccc/did-ckb)
+- **Identity / DID**: @ckb-ccc/did-ckb (`did:ckb` resolver & portable identity)
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
 - **State**: React Query
 
@@ -57,7 +58,8 @@ src/
 │   └── verification/     # Verification components
 ├── lib/
 │   ├── ckb/              # CKB config & client
-│   └── credentials/       # Core credential logic
+│   ├── credentials/       # Core credential logic
+│   └── did/              # DID resolution & formatting utilities
 ├── types/                # TypeScript types
 ├── hooks/                # Custom React hooks
 └── utils/                # Utility functions
@@ -90,13 +92,41 @@ src/
   - Reclaims locked CKB capacity
   - Melted certificates are no longer verifiable on-chain
 
+### DID (did:ckb) Integration (Week 13)
+- [x] DID Recipient Support
+  - Issue certificates to did:ckb: identifiers
+  - Automatic DID resolution to on-chain lock script
+  - Visual DID badge on certificates
+  - Link to Vellum profile for DID verification
+- [x] Portable Identity
+  - Certificates survive wallet rotations
+  - Backward compatible with address-only certificates
+  - Batch issuance supports mixed DID/address recipients
+
 ### Quality & Polish (Week 12)
 - [ ] Error Handling
 - [ ] Loading States (Spinner component)
 - [ ] Empty States (EmptyState component)
-- [ ] Unit Tests (188 tests passing)
+- [x] Unit Tests (270 tests passing)
 - [ ] Integration Tests
 - [ ] Demo/Screencast
+
+## DID (did:ckb) Support
+
+CertifyCKB supports issuing certificates to [did:ckb](https://vellum-lyart.vercel.app) identifiers, enabling portable identity for certificate recipients.
+
+**Benefits:**
+- Recipients can change wallets without losing certificates
+- Certificates are linked to the recipient's DID, not a specific wallet address
+- Visual DID badge shows verification status
+
+**Usage:**
+1. When issuing a certificate, enter the recipient's DID instead of their wallet address
+2. The system automatically resolves the DID to the current wallet address
+3. View certificates with DID recipients - they show a DID badge linking to Vellum
+
+**For Recipients:**
+If you have a DID registered on [Vellum](https://vellum-lyart.vercel.app), any certificates issued to your DID will automatically appear in your certificate list, even if you change wallets.
 
 ## Wallet Support
 
@@ -143,6 +173,7 @@ Test coverage includes:
 - Services (Template, Cluster)
 - Batch Issuance
 - Share Utility
+- DID Resolution & Integration
 
 ## Resources
 

@@ -185,6 +185,20 @@ Steps:
 Result: Certificate no longer exists on-chain
 ```
 
+#### UC8: Certificate Issuance with DID
+```
+Actor: Course Provider
+Goal: Issue certificate using recipient's DID
+Precondition: Recipient has registered a did:ckb:
+Steps:
+1. Provider enters recipient DID (did:ckb:...)
+2. System resolves DID to on-chain lock script
+3. Provider fills certificate data
+4. System creates Spore DOB with DID as recipient identifier
+5. System stores wallet address for backward compatibility
+Result: Certificate linked to recipient's portable DID
+```
+
 ---
 
 ## 4. Data Architecture
@@ -212,6 +226,7 @@ classDiagram
 
     class CredentialSubject {
         +id: string
+        +walletAddress?: string
         +courseName: string
         +courseProvider: string
         +completionDate: string
@@ -227,6 +242,18 @@ classDiagram
     VerifiableCredential --> Issuer
     VerifiableCredential --> CredentialSubject
     VerifiableCredential --> CredentialStatus
+```
+
+```typescript
+class CredentialSubject {
+    +id: string              // CKB address OR did:ckb: identifier
+    +walletAddress?: string  // Original wallet address when id is a DID
+    +courseName: string
+    +courseProvider: string
+    +completionDate: string
+    +grade?: string
+    +skills?: string[]
+}
 ```
 
 ### 4.2 Certificate Template Structure

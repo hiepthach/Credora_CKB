@@ -51,7 +51,7 @@ function previewBatch(
 ```typescript
 interface BatchEntry {
   row: number;
-  recipientAddress: string;
+  recipientAddress: string;       // CKB address (ckt/ckb) or did:ckb: identifier
   recipientName?: string;
   courseName: string;
   completionDate: string;
@@ -61,6 +61,9 @@ interface BatchEntry {
   metadata?: Record<string, any>;
   errors?: string[];
   valid: boolean;
+  resolvedAddress?: string;        // Resolved CKB address when DID is provided
+  isDid?: boolean;                 // Whether recipientAddress is a DID
+  resolutionError?: string;        // Error if DID resolution fails
 }
 
 interface ParseBatchResult {
@@ -161,6 +164,7 @@ ckt1q...456,Jane Smith,CKB Basics,2024-01-16,B+,CKB-VM
 | Check | Rule |
 |-------|------|
 | Address format | Valid CKB address |
+| Address / DID format | Valid CKB address (ckt/ckb) or did:ckb: identifier |
 | Date format | Valid ISO date |
 | Required fields | All required fields present |
 

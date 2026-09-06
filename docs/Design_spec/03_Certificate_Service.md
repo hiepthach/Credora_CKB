@@ -7,13 +7,13 @@
 | **Module** | Certificate Service |
 | **File** | `src/lib/credentials/issuer.ts` |
 | **Purpose** | Issue and manage course completion certificates |
-| **Dependencies** | `@ckb-ccc/spore`, `@ckb-ccc/core`, Encoder/Decoder |
+| **Dependencies** | `@ckb-ccc/spore`, `@ckb-ccc/core`, Encoder/Decoder, `@ckb-ccc/did-ckb` |
 
 ---
 
 ## 2. Purpose
 
-The Certificate Service handles the issuance and management of course completion certificates as Spore DOBs. It coordinates between the Encoder module and Spore SDK to create, query, and melt certificates.
+The Certificate Service handles the issuance and management of course completion certificates as Spore DOBs. It coordinates between the Encoder module and Spore SDK to create, query, and melt certificates. **Supports both CKB wallet addresses and did:ckb: identifiers as recipients.**
 
 ---
 
@@ -373,6 +373,29 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 - Consistent TypeScript types across the SDK
 - Support for `createSpore`, `createSporeCluster`, `meltSpore`, `findSpore`, `findCluster`
 
+### 6.6 DID (did:ckb) Support
+
+The certificate service supports issuing certificates to `did:ckb:` identifiers in addition to CKB addresses.
+
+**Resolution Flow:**
+```typescript
+import { resolveRecipientInput } from "@/lib/did";
+
+// Input: "did:ckb:0123456789abcdef..."
+// Output: { targetAddress, targetLock, did, isDid }
+const resolved = await resolveRecipientInput(client, didInput);
+```
+
+**Backward Compatibility:**
+- Certificates issued to CKB addresses continue to work unchanged
+- When issuing to a DID, the original wallet address is stored in `credentialSubject.walletAddress`
+- Certificate filtering checks both direct address match and DID match
+
+**Benefits:**
+- **Portable Identity**: Recipients can change wallets without losing certificates
+- **DID Resolution**: Resolves DID to lock script for on-chain cell ownership
+- **Vellum Integration**: DID badges link to recipient's Vellum profile
+
 ---
 
 ## 7. Error Handling
@@ -386,6 +409,9 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 | `LIVE_SIGNER_REQUIRED` | Mock signer used for melt | "Live signer is required to melt a certificate" |
 | `CERTIFICATE_NOT_FOUND` | Certificate doesn't exist | "Certificate not found" |
 | `NOT_HOLDER` | Signer not certificate owner | "Only the certificate holder can melt this certificate" |
+| `INVALID_DID` | Malformed did:ckb: identifier | "Invalid DID format" |
+| `DID_NOT_FOUND` | DID not registered on CKB | "DID not found on CKB blockchain" |
+| `DID_INACTIVE` | DID has been deactivated | "This DID is no longer active" |
 
 ### 7.1 Certificate Lifecycle & Melt as Permanent Deactivation
 
@@ -404,7 +430,9 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 | Test Case | Expected Result |
 |-----------|-----------------|
 | Issue with valid params | Returns certificateId and txHash |
+| Issue with valid DID | Resolves DID and returns certificateId and txHash |
 | Issue with invalid address | Throws INVALID_ADDRESS |
+| Issue with invalid DID | Throws INVALID_DID / DID_NOT_FOUND |
 | Issue with unknown cluster | Throws CLUSTER_NOT_FOUND |
 | Get holder certificates | Returns array of certificates |
 | Get holder with no certs | Returns empty array |
@@ -418,6 +446,7 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 | Test Case | Expected Result |
 |-----------|-----------------|
 | Issue → Query by holder | Certificate in results |
+| Issue with DID → Query by holder | Certificate matched via DID/address |
 | Issue → Get by ID | Correct certificate data |
 | Issue → Verify on explorer | Cell exists on chain |
 | Melt certificate → Query | Certificate no longer exists |
@@ -435,5 +464,5 @@ const meltTxHash = await liveSigner.sendTransaction(tx);
 
 ---
 
-*Version: 2.0*
-*Last Updated: 2026-08-29*
+*Version: 2.1*
+*Last Updated: 2026-09-06*
