@@ -3,6 +3,8 @@ import { isExpired, isValidDNAFormat, decodeCertificateDNA } from './decoder';
 import { getCertificate } from './issuer';
 import { getCluster } from './cluster';
 
+export { isExpired } from './decoder';
+
 /**
  * Verify a certificate by its ID
  * Performs comprehensive verification including:
@@ -87,6 +89,7 @@ export async function verifyCertificate(
         issuanceDate: certificate.issuanceDate,
         expirationDate: certificate.expirationDate,
       },
+      isExpired: expired,
       checks,
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
@@ -119,6 +122,7 @@ function createInvalidResult(
       isExpired: false,
       issuanceDate: '',
     },
+    isExpired: false,
     checks,
     errors: errors.length > 0 ? errors : undefined,
     timestamp: new Date().toISOString(),

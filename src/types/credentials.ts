@@ -64,6 +64,7 @@ export interface VerificationResult {
     issuanceDate: string;
     expirationDate?: string;
   };
+  isExpired?: boolean;
   checks: VerificationChecks;
   errors?: string[];
   timestamp?: string;

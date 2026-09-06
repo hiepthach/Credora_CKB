@@ -17,12 +17,22 @@ if (typeof globalThis.crypto === 'undefined') {
 class MockFile extends Blob {
   name: string;
   lastModified: number;
+  private _content: string;
 
   constructor(parts: (string | Blob)[], fileName: string, options?: { type?: string }) {
     const content = parts.map(p => typeof p === 'string' ? p : '').join('');
     super([content], { type: options?.type || '' });
+    this._content = content;
     this.name = fileName;
     this.lastModified = Date.now();
+  }
+
+  async text(): Promise<string> {
+    return this._content;
+  }
+
+  async arrayBuffer(): Promise<ArrayBuffer> {
+    return new TextEncoder().encode(this._content).buffer;
   }
 }
 

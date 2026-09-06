@@ -57,12 +57,26 @@ export async function resolveRecipientInput(
 
   // Case 2: It's a CKB address
   if (trimmed.startsWith("ckt") || trimmed.startsWith("ckb")) {
-    const addr = await ccc.Address.fromString(trimmed, client);
-    return {
-      targetAddress: trimmed,
-      targetLock: addr.script,
-      isDid: false,
-    };
+    try {
+      const addr = await ccc.Address.fromString(trimmed, client);
+      return {
+        targetAddress: trimmed,
+        targetLock: addr.script,
+        isDid: false,
+      };
+    } catch {
+      if (client && typeof (client as any).addressToScript === "function") {
+        const script = await (client as any).addressToScript(trimmed);
+        if (script) {
+          return {
+            targetAddress: trimmed,
+            targetLock: script,
+            isDid: false,
+          };
+        }
+      }
+      throw new Error(`Invalid CKB address: "${trimmed}"`);
+    }
   }
 
   throw new Error(

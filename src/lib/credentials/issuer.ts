@@ -591,7 +591,8 @@ export async function meltCertificate(
     typeof signer !== 'object' ||
     !('client' in signer) ||
     typeof (signer as any).sendTransaction !== 'function' ||
-    typeof (signer as any).getRecommendedAddressObj !== 'function'
+    (typeof (signer as any).getRecommendedAddressObj !== 'function' &&
+     typeof (signer as any).getRecommendedAddress !== 'function')
   ) {
     throw new Error('Live signer is required to melt a certificate');
   }
@@ -621,8 +622,14 @@ export async function meltCertificate(
     throw new Error('Certificate not found in local storage. Please ensure the certificate was issued to your address.');
   }
 
-  const addrObj = await liveSigner.getRecommendedAddressObj();
-  const holderLock = addrObj.script;
+  let holderLock: ccc.Script;
+  if (typeof (liveSigner as any).getRecommendedAddressObj === 'function') {
+    const addrObj = await liveSigner.getRecommendedAddressObj();
+    holderLock = addrObj.script;
+  } else {
+    const addrStr = await liveSigner.getRecommendedAddress();
+    holderLock = await (liveSigner.client as any).addressToScript(addrStr);
+  }
 
   // 1. Resolve on-chain spore ID and verify cell ownership
   let targetSporeId: `0x${string}` | undefined = (certRecord.sporeId as `0x${string}`) || undefined;

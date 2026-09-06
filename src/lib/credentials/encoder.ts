@@ -8,10 +8,22 @@
 import type { CertificateDNA, CredentialSubjectMetadata } from '@/types';
 
 
-/**
- * Encode certificate data into W3C VC format
- */
-export function encodeCertificateDNA(params: {
+export interface FlatCertificateData {
+  courseName: string;
+  courseProvider?: string;
+  completionDate?: string;
+  recipientAddress?: string;
+  recipientName?: string;
+  clusterId?: string;
+  id?: string;
+  expirationDate?: string;
+  grade?: string;
+  score?: number;
+  skills?: string[];
+  type?: string;
+}
+
+export interface StructuredCertificateParams {
   id: string;
   issuer: { id: string; name?: string; description?: string };
   subject: {
@@ -27,7 +39,37 @@ export function encodeCertificateDNA(params: {
   };
   issuanceDate?: string;
   expirationDate?: string;
-}): CertificateDNA {
+}
+
+export type EncodeCertificateParams = StructuredCertificateParams | FlatCertificateData;
+
+/**
+ * Encode certificate data into W3C VC format
+ */
+export function encodeCertificateDNA(params: EncodeCertificateParams): CertificateDNA {
+  if (!('subject' in params)) {
+    const flat = params as FlatCertificateData;
+    const certId = flat.id || generateCertificateId();
+    return encodeCertificateDNA({
+      id: certId,
+      issuer: {
+        id: flat.clusterId || '0xcluster',
+        name: flat.courseProvider || 'Unknown Provider',
+      },
+      subject: {
+        id: flat.recipientAddress,
+        type: flat.type || 'CourseCertificate',
+        name: flat.recipientName,
+        courseName: flat.courseName,
+        completionDate: flat.completionDate,
+        grade: flat.grade,
+        score: flat.score,
+        skills: flat.skills,
+      },
+      expirationDate: flat.expirationDate,
+    });
+  }
+
   const { id, issuer, subject, issuanceDate, expirationDate } = params;
 
   const dna: CertificateDNA = {

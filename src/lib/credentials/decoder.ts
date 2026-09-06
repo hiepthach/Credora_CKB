@@ -10,13 +10,19 @@ import type { CertificateDNA, CertificateDisplay } from '@/types';
 /**
  * Decode JSON string to CertificateDNA
  */
-export function decodeCertificateDNA(json: string): CertificateDNA {
+export function decodeCertificateDNA(json: string | CertificateDNA): CertificateDNA {
   let data: unknown;
 
-  try {
-    data = JSON.parse(json);
-  } catch {
-    throw new Error('Invalid certificate DNA: invalid JSON');
+  if (typeof json === 'object' && json !== null) {
+    data = json;
+  } else if (typeof json === 'string') {
+    try {
+      data = JSON.parse(json);
+    } catch {
+      throw new Error('Invalid certificate DNA: invalid JSON');
+    }
+  } else {
+    throw new Error('Invalid certificate DNA: invalid input');
   }
 
   if (!isValidDNAFormat(data)) {
@@ -29,11 +35,15 @@ export function decodeCertificateDNA(json: string): CertificateDNA {
 /**
  * Check if certificate is expired
  */
-export function isExpired(dna: CertificateDNA): boolean {
-  if (!dna.expirationDate) {
+export function isExpired(dnaOrDate: CertificateDNA | string): boolean {
+  if (!dnaOrDate) {
     return false;
   }
-  return new Date(dna.expirationDate) < new Date();
+  const dateStr = typeof dnaOrDate === 'string' ? dnaOrDate : dnaOrDate.expirationDate;
+  if (!dateStr) {
+    return false;
+  }
+  return new Date(dateStr) < new Date();
 }
 
 /**

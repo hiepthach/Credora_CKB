@@ -110,11 +110,15 @@ export function parseJSON(content: string): {
  */
 export function validateBatchEntries(entries: BatchEntry[]): BatchValidationResult {
   const validated = entries.map((entry) => validateEntry(entry));
-  const allValid = validated.every((e) => e.valid);
+  const validCount = validated.filter((e) => e.valid).length;
+  const invalidCount = validated.length - validCount;
+  const allValid = invalidCount === 0;
 
   return {
     valid: allValid,
     entries: validated,
+    validCount,
+    invalidCount,
   };
 }
 
@@ -183,8 +187,9 @@ export function previewBatch(
   entries: BatchEntry[],
   clusterId: string
 ): BatchPreview {
-  const validEntries = entries.filter((e) => e.valid);
-  const invalidEntries = entries.filter((e) => !e.valid);
+  const validated = entries.map((e) => validateEntry(e));
+  const validEntries = validated.filter((e) => e.valid);
+  const invalidEntries = validated.filter((e) => !e.valid);
   const warnings: string[] = [];
 
   // Add warnings
@@ -196,12 +201,18 @@ export function previewBatch(
     warnings.push('Large batch may take several minutes to process');
   }
 
+  const fee = `${validEntries.length * CKB_PER_CERTIFICATE} CKB`;
+
   return {
     clusterId,
     totalEntries: entries.length,
+    totalCount: entries.length,
     validEntries,
+    validCount: validEntries.length,
     invalidEntries,
-    estimatedFee: `${validEntries.length * CKB_PER_CERTIFICATE} CKB`,
+    invalidCount: invalidEntries.length,
+    estimatedFee: fee,
+    estimatedTotalCapacity: fee,
     warnings,
   };
 }
