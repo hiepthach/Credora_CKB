@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useWallet } from '@/hooks/useWallet';
 import { VerifyForm, VerifyResult } from '@/components/verification';
-import { Spinner, Card, Badge, Modal } from '@/components/ui';
+import { Spinner, Card, Badge, Modal, EmptyState } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { CertificateDetail } from '@/components/certificate';
 import type { VerificationResult } from '@/types';
@@ -71,6 +71,16 @@ function VerifyPageContent() {
           <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
             <p className="text-sm text-red-400">Verification failed: {String(error)}</p>
           </div>
+        )}
+
+        {!result && !isLoading && !error && !certificateId && (
+          <Card variant="default" padding="lg" className="border-fog-line/10 bg-midnight-plum/30">
+            <EmptyState
+              icon="🔎"
+              title="Ready to Verify"
+              description="Enter any Spore DOB Certificate ID (32-byte 0x hex) above to fetch and cryptographically verify on-chain credential DNA."
+            />
+          </Card>
         )}
       </div>
 

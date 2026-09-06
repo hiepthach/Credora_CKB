@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, Badge, Modal } from '@/components/ui';
+import { Card, Button, Badge, Modal, EmptyState } from '@/components/ui';
 import { PaperCertificate } from '@/components/certificate/PaperCertificate';
 import { Eye, Sparkles, ArrowRight, Palette, Check } from 'lucide-react';
 import type { CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
@@ -134,6 +134,16 @@ export function TemplateList({
       },
     },
   });
+
+  if (presets.length === 0) {
+    return (
+      <EmptyState
+        icon="🎨"
+        title="No Certificate Styles Found"
+        description="No style presets match your current filter. Clear your filter to view all preset templates."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
