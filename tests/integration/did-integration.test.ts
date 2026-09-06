@@ -41,7 +41,6 @@ describe('DID Integration', () => {
 
       vi.mocked(resolveRecipientInput).mockResolvedValue({
         targetAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
-        targetLock: { codeHash: '0x', hashType: 'type', args: '0x' },
         targetLock: { codeHash: '0x', hashType: 'type', args: '0x' } as any,
         did: 'did:ckb:abcdefghijklmnopqrstuvwxyz234567',
         isDid: true,
@@ -62,7 +61,6 @@ describe('DID Integration', () => {
 
       vi.mocked(resolveRecipientInput).mockResolvedValue({
         targetAddress: 'ckt1qzda0cr08m85hc8j9np9u2xnjvs2tsq8q5h5xcmr',
-        targetLock: { codeHash: '0x', hashType: 'type', args: '0x' },
         targetLock: { codeHash: '0x', hashType: 'type', args: '0x' } as any,
         isDid: false,
       });

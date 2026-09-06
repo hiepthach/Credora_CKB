@@ -6,3 +6,5 @@ export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
 export { Modal } from './Modal';
 export { CredoraLogo } from './CredoraLogo';
+export { Alert } from './Alert';
+export type { AlertProps, AlertVariant } from './Alert';
