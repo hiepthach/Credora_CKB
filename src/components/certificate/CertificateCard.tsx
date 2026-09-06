@@ -6,6 +6,7 @@ import { formatDate, truncateAddress } from '@/utils';
 import { formatCertificateDisplay, isExpired } from '@/lib/credentials';
 import { Award, Calendar, User, ExternalLink, ArrowRight } from 'lucide-react';
 import { useNetwork } from '@/hooks';
+import { DidBadge } from './DidBadge';
 
 interface CertificateCardProps {
   certificate: CertificateDNA;
@@ -58,6 +59,7 @@ export function CertificateCard({
           <div className="flex items-center gap-2 text-xs text-ash-veil">
             <User className="w-3.5 h-3.5 text-mid-ash" />
             <span className="text-bone-white font-medium">{display.recipient}</span>
+            <DidBadge id={certificate.credentialSubject.id || ''} />
           </div>
           <div className="flex items-center gap-2 text-xs text-mid-ash">
             <Calendar className="w-3.5 h-3.5" />

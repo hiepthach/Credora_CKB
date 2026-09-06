@@ -39,6 +39,7 @@ A registry for issuing, managing, and verifying course completion certificates o
 | **F3** | Student View | Students see all their certificates | P0 |
 | **F4** | Student Share | Share certificate ID or view link | P0 |
 | **F5** | Verifier Check | Verify certificate by ID | P0 |
+| **F15** | DID Recipient Support | Issue certificates to did:ckb: identifiers | P1 |
 
 ### 2.2 Additional Features
 
@@ -115,11 +116,12 @@ Actor: Course Provider
 Goal: Issue certificate to student
 Precondition: Provider has created Cluster
 Steps:
-1. Provider enters student wallet address
-2. Provider fills certificate data (course name, date, grade)
-3. System encodes to W3C VC JSON
-4. System creates Spore DOB
-5. System sends transaction
+1. Provider enters student wallet address or DID (did:ckb:)
+2. If DID provided, system resolves to wallet address on-chain
+3. Provider fills certificate data (course name, date, grade)
+4. System encodes to W3C VC JSON
+5. System creates Spore DOB with recipient lock script
+6. System sends transaction
 Result: Student receives certificate
 ```
 

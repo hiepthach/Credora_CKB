@@ -17,6 +17,12 @@ export interface BatchEntry {
   theme?: CertificateTheme;
   customColor?: string;
   customTitle?: string;
+  /** Resolved CKB address when input is a DID */
+  resolvedAddress?: string;
+  /** Whether the input was a DID */
+  isDid?: boolean;
+  /** Error message if DID resolution failed */
+  resolutionError?: string;
 }
 
 export interface ParseBatchResult {
@@ -52,6 +58,8 @@ export interface BatchCertificateResult {
   transactionHash?: string;
   success: boolean;
   error?: string;
+  /** Whether the recipient was a DID */
+  isDid?: boolean;
 }
 
 export interface BatchIssueResult {

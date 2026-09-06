@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CertificateForm } from '@/components/certificate/CertificateForm';
 
+// Mock useWallet hook
+vi.mock('@/hooks/useWallet', () => ({
+  useWallet: vi.fn(() => ({
+    client: null, // No client in tests - DID resolution won't trigger
+    address: null,
+    signer: null,
+    isConnected: false,
+    isLoadingAddress: false,
+    open: vi.fn(),
+  })),
+}));
+
 describe('CertificateForm Style Selection & Color Picker', () => {
   it('renders certificate layout, color picker, and custom title options and includes them on submit', () => {
     const handleSubmit = vi.fn();

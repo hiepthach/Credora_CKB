@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +16,8 @@ import {
   getCertificate,
 } from '@/lib/credentials';
 import { ArrowLeft, Wallet, RefreshCw, Sparkles, Filter } from 'lucide-react';
+import { listDidCkbsByLock } from '@ckb-ccc/did-ckb';
+import { ccc } from '@ckb-ccc/core';
 
 interface CertificateWithMeta {
   certificate: CertificateDNA;
@@ -36,6 +38,28 @@ function CertificatesContent() {
   const [shareResult, setShareResult] = useState<{ message: string; success: boolean } | null>(null);
   const [meltingCertId, setMeltingCertId] = useState<string | null>(null);
   const [meltError, setMeltError] = useState<string | null>(null);
+  const [userDids, setUserDids] = useState<string[]>([]);
+
+  // Fetch user's DIDs when address changes
+  useEffect(() => {
+    if (!address || !client) {
+      setUserDids([]);
+      return;
+    }
+
+    const fetchUserDids = async () => {
+      try {
+        const addr = await ccc.Address.fromString(address, client);
+        const dids = await listDidCkbsByLock({ client, lock: addr.script });
+        setUserDids(dids.map((d) => d.did));
+      } catch {
+        // User has no DIDs - that's fine
+        setUserDids([]);
+      }
+    };
+
+    fetchUserDids();
+  }, [address, client]);
 
   const { data: rawCertificates = [], isLoading, refetch, error } = useQuery({
     queryKey: ['certificates', address],
@@ -93,8 +117,28 @@ function CertificatesContent() {
 
     const checkIsRecipient = (c: CertificateWithMeta): boolean => {
       if (!address) return false;
-      const recipientAddr = c.certificate?.credentialSubject?.id || '';
-      return isAddressMatch(recipientAddr, address);
+
+      const subjectId = c.certificate?.credentialSubject?.id || '';
+      if (!subjectId) return false;
+
+      // Case 1: Direct address match (handles both old and new certificates)
+      if (isAddressMatch(subjectId, address)) {
+        return true;
+      }
+
+      // Case 2: DID match - check if user's DID matches the certificate's DID
+      if (subjectId.startsWith('did:ckb:') && userDids.includes(subjectId)) {
+        return true;
+      }
+
+      // Case 3: For DID-issued certificates, also check resolved address
+      // (covers cases where credentialSubject.walletAddress matches)
+      const walletAddr = c.certificate?.credentialSubject?.walletAddress;
+      if (walletAddr && isAddressMatch(walletAddr, address)) {
+        return true;
+      }
+
+      return false;
     };
 
     const checkIsIssuer = (c: CertificateWithMeta): boolean => {
@@ -146,7 +190,7 @@ function CertificatesContent() {
       allUserCerts: allUser,
       certificates: activeList,
     };
-  }, [rawCertificates, userClusters, address, filterMode]);
+  }, [rawCertificates, userClusters, address, filterMode, userDids]);
 
   const handleShare = async (cert: CertificateWithMeta) => {
     const { shareCertificate } = await import('@/lib/share');

@@ -51,7 +51,7 @@ describe('Batch Issuance', () => {
 
     // Test: Detect invalid CKB address format
     // Input: BatchEntry with address not starting with 'ckt'
-    // Expected: Entry marked invalid with 'Invalid CKB address format' error
+    // Expected: Entry marked invalid with 'Invalid format: must be CKB address (ckt/ckb) or did:ckb:...' error
     it('should detect invalid address format', () => {
       const entriesWithBadAddress: BatchEntry[] = [
         {
@@ -68,7 +68,7 @@ describe('Batch Issuance', () => {
 
       expect(result.valid).toBe(false);
       expect(result.entries[0].valid).toBe(false);
-      expect(result.entries[0].errors).toContain('Invalid CKB address format');
+      expect(result.entries[0].errors).toContain('Invalid format: must be CKB address (ckt/ckb) or did:ckb:...');
     });
 
     // Test: Detect missing course name
@@ -272,7 +272,7 @@ describe('Batch Issuance', () => {
         recipientAddress: 'invalid',
         courseName: '',
         completionDate: 'bad',
-        errors: ['Invalid CKB address format', 'Course name is required'],
+        errors: ['Invalid format: must be CKB address (ckt/ckb) or did:ckb:...', 'Course name is required'],
         valid: false,
       },
     ];

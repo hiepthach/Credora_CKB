@@ -4,6 +4,7 @@ import { unpackToRawSporeData } from '@ckb-ccc/spore/advanced';
 import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
+import { resolveRecipientInput } from '@/lib/did';
 
 interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -78,26 +79,30 @@ export async function issueCertificate(
     const liveSigner = signer as ccc.Signer;
 
     // Resolve recipient lock script — Fail-Fast if recipient address is invalid
-    const recipientAddr = subject.id || '';
-    if (!recipientAddr) {
-      throw new Error('Recipient CKB address is required');
+    const recipientInput = subject.id || '';
+    if (!recipientInput) {
+      throw new Error('Recipient identifier (address or DID) is required');
     }
 
     let recipientLockScript: ccc.Script | null = null;
+    let resolvedDid: string | undefined;
 
     try {
-      const AddressClass = CkbAddress;
-      if (AddressClass?.fromString) {
-        const addrObj = await AddressClass.fromString(recipientAddr, liveSigner.client);
-        recipientLockScript = addrObj.script;
+      const resolved = await resolveRecipientInput(liveSigner.client, recipientInput);
+      recipientLockScript = resolved.targetLock;
+      resolvedDid = resolved.did;
+
+      // If recipient used a DID, store the original wallet address for compatibility
+      if (resolvedDid && resolved.targetAddress !== recipientInput) {
+        subject.walletAddress = resolved.targetAddress;
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Invalid recipient CKB address "${recipientAddr}": ${errMsg}`);
+      throw new Error(`Failed to resolve recipient "${recipientInput}": ${errMsg}`);
     }
 
     if (!recipientLockScript) {
-      throw new Error(`Failed to resolve lock script for recipient address "${recipientAddr}"`);
+      throw new Error(`Failed to resolve lock script for recipient "${recipientInput}"`);
     }
 
     try {

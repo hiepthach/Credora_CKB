@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Button, Input } from '@/components/ui';
 import type { CertificateLayout, CertificateTheme } from '@/types';
-import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles } from 'lucide-react';
+import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/utils';
 import { CERTIFICATE_PRESETS } from '@/components/template';
+import { isDidInput } from '@/lib/did';
+import { useWallet } from '@/hooks/useWallet';
 
 export interface CertificateData {
   recipientAddress: string;
@@ -68,6 +70,15 @@ export function CertificateForm({
   onCancel,
   loading = false,
 }: CertificateFormProps) {
+  const { client } = useWallet();
+  const [resolvedInfo, setResolvedInfo] = useState<{
+    address: string;
+    isDid: boolean;
+    display: string;
+  } | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<CertificateData>({
     recipientAddress: defaultRecipientAddress || '',
     recipientName: '',
@@ -84,6 +95,56 @@ export function CertificateForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [skillsInput, setSkillsInput] = useState('');
+
+  // DID resolution effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const input = formData.recipientAddress.trim();
+      if (!input) {
+        setResolvedInfo(null);
+        setResolveError(null);
+        return;
+      }
+
+      // Skip if it looks like a CKB address (immediate validation)
+      if (input.startsWith('ckt') || input.startsWith('ckb')) {
+        setResolvedInfo({ address: input, isDid: false, display: input });
+        setResolveError(null);
+        return;
+      }
+
+      // Try to resolve as DID
+      if (!isDidInput(input)) {
+        setResolvedInfo(null);
+        setResolveError('Invalid format: must be CKB address or did:ckb:...');
+        return;
+      }
+
+      if (!client) {
+        setResolveError('Wallet not connected');
+        return;
+      }
+
+      setIsResolving(true);
+      try {
+        const { resolveRecipientInput } = await import('@/lib/did');
+        const resolved = await resolveRecipientInput(client, input);
+        setResolvedInfo({
+          address: resolved.targetAddress,
+          isDid: true,
+          display: resolved.isDid ? input : resolved.targetAddress,
+        });
+        setResolveError(null);
+      } catch (err) {
+        setResolveError(`DID not found on CKB: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setResolvedInfo(null);
+      } finally {
+        setIsResolving(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [formData.recipientAddress, client]);
 
   const notifyChange = (updatedData: CertificateData, currentSkillsInput = skillsInput) => {
     if (onChange) {
@@ -106,9 +167,11 @@ export function CertificateForm({
     const newErrors: Record<string, string> = {};
 
     if (!formData.recipientAddress.trim()) {
-      newErrors.recipientAddress = 'Recipient address is required';
-    } else if (!formData.recipientAddress.startsWith('ckt') && !formData.recipientAddress.startsWith('ckb')) {
-      newErrors.recipientAddress = 'Invalid CKB address format (must start with ckt or ckb)';
+      newErrors.recipientAddress = 'Recipient address or DID is required';
+    } else if (!isDidInput(formData.recipientAddress) &&
+               !formData.recipientAddress.startsWith('ckt') &&
+               !formData.recipientAddress.startsWith('ckb')) {
+      newErrors.recipientAddress = 'Invalid format: must be CKB address (ckt/ckb) or did:ckb:...';
     }
 
     if (!formData.recipientName.trim()) {
@@ -192,7 +255,7 @@ export function CertificateForm({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-xs font-medium text-ash-veil">
-              Recipient CKB Address <span className="text-lavender-spark">*</span>
+              Recipient Address or DID <span className="text-lavender-spark">*</span>
             </label>
             {defaultRecipientAddress && formData.recipientAddress !== defaultRecipientAddress && (
               <button
@@ -205,12 +268,40 @@ export function CertificateForm({
             )}
           </div>
           <Input
-            placeholder="ckt1qzda0cr08m85hc8j..."
+            placeholder="ckt1qzda0cr08m85hc8j... or did:ckb:..."
             value={formData.recipientAddress}
             onChange={(v) => updateField('recipientAddress', v)}
             error={errors.recipientAddress}
             required
           />
+          {/* DID Resolution Preview */}
+          {isResolving && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-mid-ash">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Resolving DID...
+            </div>
+          )}
+          {resolvedInfo && resolvedInfo.isDid && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-green-500/10 rounded-lg border border-green-500/30">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div className="text-sm">
+                <span className="font-medium text-green-400">
+                  DID Resolved
+                </span>
+                <span className="text-mid-ash ml-2">
+                  to {formData.recipientAddress.slice(0, 8)}...{formData.recipientAddress.slice(-6)}
+                </span>
+              </div>
+            </div>
+          )}
+          {resolveError && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-red-500/10 rounded-lg border border-red-500/30">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <span className="text-sm text-red-400">
+                {resolveError}
+              </span>
+            </div>
+          )}
         </div>
 
         <Input

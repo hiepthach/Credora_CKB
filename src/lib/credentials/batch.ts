@@ -8,6 +8,7 @@
 import Papa from 'papaparse';
 import type { BatchEntry, BatchValidationResult, BatchPreview, BatchIssueParams, BatchIssueResult, BatchCertificateResult, BatchError, CertificateLayout, CertificateTheme } from '@/types';
 import { issueCertificate } from './issuer';
+import { isDidInput } from '@/lib/did';
 
 const CKB_PER_CERTIFICATE = 151;
 const LARGE_BATCH_THRESHOLD = 100;
@@ -118,14 +119,18 @@ export function validateBatchEntries(entries: BatchEntry[]): BatchValidationResu
 }
 
 /**
- * Validate single entry 
+ * Validate single entry
  */
 export function validateEntry(entry: BatchEntry): BatchEntry {
   const errors: string[] = [];
 
-  // Validate address
-  if (!entry.recipientAddress || (!entry.recipientAddress.startsWith('ckt') && !entry.recipientAddress.startsWith('ckb'))) {
-    errors.push('Invalid CKB address format');
+  // Validate address (supports both CKB address and DID)
+  if (!entry.recipientAddress) {
+    errors.push('Recipient address is required');
+  } else if (!isDidInput(entry.recipientAddress) &&
+             !entry.recipientAddress.startsWith('ckt') &&
+             !entry.recipientAddress.startsWith('ckb')) {
+    errors.push('Invalid format: must be CKB address (ckt/ckb) or did:ckb:...');
   }
 
   // Validate course name

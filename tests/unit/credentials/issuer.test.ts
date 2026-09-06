@@ -16,6 +16,27 @@ import {
 } from '../../../src/lib/credentials/issuer';
 import type { CredentialSubject } from '@/types';
 
+// Mock the DID resolution module
+vi.mock('@/lib/did', () => ({
+  resolveRecipientInput: vi.fn().mockImplementation(async (_client: unknown, input: string) => {
+    // Mock implementation: if input looks like a DID, resolve it; otherwise treat as address
+    if (input.startsWith('did:ckb:')) {
+      return {
+        targetAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+        targetLock: { args: '0x', codeHash: '0x', hashType: 'type' },
+        did: input,
+        isDid: true,
+      };
+    }
+    // For CKB addresses, return as-is
+    return {
+      targetAddress: input,
+      targetLock: { args: '0x', codeHash: '0x', hashType: 'type' },
+      isDid: false,
+    };
+  }),
+}));
+
 describe('Certificate Service (Issuer)', () => {
   beforeEach(() => {
     // Clear mock storage before each test
@@ -363,7 +384,7 @@ describe('Certificate Service (Issuer)', () => {
             // No id field
           },
         })
-      ).rejects.toThrow(/Recipient CKB address is required/);
+      ).rejects.toThrow(/Recipient identifier \(address or DID\) is required/);
     });
 
     // Test: Fail-fast when live signer is used with missing recipient address
@@ -385,13 +406,16 @@ describe('Certificate Service (Issuer)', () => {
             id: '',
           },
         })
-      ).rejects.toThrow(/Recipient CKB address is required/);
+      ).rejects.toThrow(/Recipient identifier \(address or DID\) is required/);
     });
 
     // Test: Fail-fast when live signer is used with invalid recipient address
     it('should throw error when live signer is used with invalid recipient address', async () => {
-      // Mock Address.fromString to throw for invalid address
-      vi.mocked(Address.fromString).mockRejectedValueOnce(new Error('Invalid address format'));
+      // Mock resolveRecipientInput to throw for invalid address
+      const { resolveRecipientInput } = await import('@/lib/did');
+      vi.mocked(resolveRecipientInput).mockRejectedValueOnce(
+        new Error('Invalid recipient format')
+      );
 
       await expect(
         issueCertificate({
@@ -405,7 +429,7 @@ describe('Certificate Service (Issuer)', () => {
             completionDate: '2024-03-01',
           },
         })
-      ).rejects.toThrow(/Invalid recipient CKB address/);
+      ).rejects.toThrow(/Failed to resolve recipient/);
     });
   });
 

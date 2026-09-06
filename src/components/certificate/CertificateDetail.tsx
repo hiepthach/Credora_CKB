@@ -22,6 +22,7 @@ import {
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
 import { PaperCertificate } from './PaperCertificate';
+import { DidBadge } from './DidBadge';
 
 interface CertificateDetailProps {
   certificate: CertificateDNA;
@@ -205,6 +206,7 @@ export function CertificateDetail({
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-mid-ash" />
                 <span className="text-bone-white font-medium">{display.recipient}</span>
+                <DidBadge id={subject.id || ''} />
               </div>
               {subject.grade && (
                 <div className="flex items-center gap-3">

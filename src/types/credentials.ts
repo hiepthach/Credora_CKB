@@ -27,6 +27,8 @@ export interface CredentialSubject {
   score?: number;
   skills?: string[];
   metadata?: CredentialSubjectMetadata;
+  /** Original wallet address when id is a DID (for backward compatibility) */
+  walletAddress?: string;
 }
 
 
