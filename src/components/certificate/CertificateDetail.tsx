@@ -182,7 +182,7 @@ export function CertificateDetail({
               Share Certificate
             </Button>
           )}
-          {!expired && onMelt && (
+          {onMelt && (
             <Button
               variant="secondary"
               className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
@@ -398,7 +398,7 @@ export function CertificateDetail({
               </Button>
             )}
 
-            {!expired && onMelt && (
+            {onMelt && (
               <Button
                 variant="secondary"
                 className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"

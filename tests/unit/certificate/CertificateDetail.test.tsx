@@ -97,6 +97,37 @@ describe('CertificateDetail Component View Toggle', () => {
     expect(screen.getByText(/permanently destroy/i)).toBeInTheDocument();
   });
 
+  it('allows melting when certificate is expired', () => {
+    const expiredCert: CertificateDNA = {
+      ...mockCert,
+      expirationDate: '2020-01-01T00:00:00Z', // Definitely in the past
+    };
+    const mockMelt = vi.fn();
+
+    render(
+      <CertificateDetail
+        certificate={expiredCert}
+        certificateId="cert_expired_123"
+        onMelt={mockMelt}
+      />
+    );
+
+    // In Visual mode, Melt button should still be rendered
+    const meltBtn = screen.getByRole('button', { name: /Melt & Reclaim CKB/i });
+    expect(meltBtn).toBeInTheDocument();
+    fireEvent.click(meltBtn);
+    expect(screen.getByText(/permanently destroy/i)).toBeInTheDocument();
+
+    // Close modal
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+
+    // In Technical mode, Melt button should also be rendered
+    const techTab = screen.getByRole('button', { name: /On-Chain Proof/i });
+    fireEvent.click(techTab);
+    const techMeltBtns = screen.getAllByRole('button', { name: /Melt & Reclaim CKB/i });
+    expect(techMeltBtns.length).toBeGreaterThanOrEqual(1);
+  });
+
   it('displays Address with explorer link and copy button when recipient has a wallet address', () => {
     const walletAddress = 'ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790twu';
     const addressCert: CertificateDNA = {
