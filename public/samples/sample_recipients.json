@@ -1,0 +1,41 @@
+[
+  {
+    "recipientAddress": "ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientName": "Alice Nakamoto",
+    "courseName": "Nervos CKB Architecture 101",
+    "completionDate": "2026-03-01",
+    "expirationDate": "2027-03-01",
+    "grade": "A+",
+    "score": 98,
+    "skills": ["RISC-V", "CKB-VM", "Cell Model"],
+    "layout": "classic",
+    "theme": "gold",
+    "customTitle": "CERTIFICATE OF DISTINCTION"
+  },
+  {
+    "recipientAddress": "did:ckb:ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientName": "Bob Turing",
+    "courseName": "Smart Contract Programming with Rust",
+    "completionDate": "2026-03-05",
+    "grade": "A",
+    "score": 92,
+    "skills": ["Rust", "Molecules", "Capsule"],
+    "layout": "modern",
+    "theme": "blue",
+    "customTitle": "CERTIFICATE OF COMPLETION"
+  },
+  {
+    "recipientAddress": "ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientName": "Charlie Shannon",
+    "courseName": "Spore Protocol & DOB Mastery",
+    "completionDate": "2026-03-10",
+    "expirationDate": "2028-03-10",
+    "grade": "A+",
+    "score": 95,
+    "skills": ["Spore", "DOB/0", "Co-Build"],
+    "layout": "compact",
+    "theme": "green",
+    "customTitle": "DOB CERTIFIED DEVELOPER"
+  }
+]
+

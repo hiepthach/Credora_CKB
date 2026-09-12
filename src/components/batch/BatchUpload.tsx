@@ -74,6 +74,7 @@ export function BatchUpload({
       const csv = `recipientAddress,recipientName,courseName,completionDate,expirationDate,grade,score,skills,layout,theme,customColor,customTitle
 ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM,classic,gold,,CERTIFICATE OF EXCELLENCE
 ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
+did:ckb:ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
       downloadFile(csv, 'certificate_template.csv', 'text/csv');
     } else {
       const json = JSON.stringify([
