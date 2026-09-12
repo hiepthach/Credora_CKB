@@ -72,14 +72,14 @@ export function BatchUpload({
   const downloadTemplate = (format: 'csv' | 'json') => {
     if (format === 'csv') {
       const csv = `recipientAddress,recipientName,courseName,completionDate,expirationDate,grade,score,skills,layout,theme,customColor,customTitle
-ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM,classic,gold,,CERTIFICATE OF EXCELLENCE
-ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
-did:ckb:ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
+ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790abc,John Doe,CKB Basics,2026-01-15,2027-01-15,A,95,Rust;CKB-VM,classic,gold,,CERTIFICATE OF EXCELLENCE
+ckt1qrfrwcdnvssswdwpn3s9v8fp87emat306ctjwsm3nmlkjg8qyza2cqgqqx5zp6gss3dk2twvx36e9pz449rthejplgx6gxyz,Jane Smith,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA,
+did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc,Hannie Kim,CKB Basics,2026-01-16,,B+,88,CKB-VM,modern,custom,#F26F21,DIPLOMA`;
       downloadFile(csv, 'certificate_template.csv', 'text/csv');
     } else {
       const json = JSON.stringify([
         {
-          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientAddress: 'ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790abc',
           recipientName: 'John Doe',
           courseName: 'CKB Basics',
           completionDate: '2026-01-15',
@@ -92,7 +92,7 @@ did:ckb:ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv,Jane Smi
           customTitle: 'CERTIFICATE OF EXCELLENCE',
         },
         {
-          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientAddress: 'ckt1qrfrwcdnvssswdwpn3s9v8fp87emat306ctjwsm3nmlkjg8qyza2cqgqqx5zp6gss3dk2twvx36e9pz449rthejplgx6gxyz',
           recipientName: 'Jane Smith',
           courseName: 'CKB Basics',
           completionDate: '2026-01-16',

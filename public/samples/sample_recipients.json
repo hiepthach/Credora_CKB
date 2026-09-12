@@ -1,6 +1,6 @@
 [
   {
-    "recipientAddress": "ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientAddress": "ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790abc",
     "recipientName": "Alice Nakamoto",
     "courseName": "Nervos CKB Architecture 101",
     "completionDate": "2026-03-01",
@@ -13,7 +13,7 @@
     "customTitle": "CERTIFICATE OF DISTINCTION"
   },
   {
-    "recipientAddress": "did:ckb:ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientAddress": "did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc",
     "recipientName": "Bob Turing",
     "courseName": "Smart Contract Programming with Rust",
     "completionDate": "2026-03-05",
@@ -25,7 +25,7 @@
     "customTitle": "CERTIFICATE OF COMPLETION"
   },
   {
-    "recipientAddress": "ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv",
+    "recipientAddress": "ckt1qrfrwcdnvssswdwpn3s9v8fp87emat306ctjwsm3nmlkjg8qyza2cqgqqx5zp6gss3dk2twvx36e9pz449rthejplgx6gxyz",
     "recipientName": "Charlie Shannon",
     "courseName": "Spore Protocol & DOB Mastery",
     "completionDate": "2026-03-10",
