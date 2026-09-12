@@ -96,4 +96,114 @@ describe('CertificateDetail Component View Toggle', () => {
 
     expect(screen.getByText(/permanently destroy/i)).toBeInTheDocument();
   });
+
+  it('displays Address with explorer link and copy button when recipient has a wallet address', () => {
+    const walletAddress = 'ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790twu';
+    const addressCert: CertificateDNA = {
+      ...mockCert,
+      credentialSubject: {
+        ...mockCert.credentialSubject,
+        id: walletAddress,
+      },
+    };
+
+    render(
+      <CertificateDetail
+        certificate={addressCert}
+        certificateId="cert_addr_123"
+      />
+    );
+
+    // Switch to Technical / On-Chain Proof mode
+    const techTab = screen.getByRole('button', { name: /On-Chain Proof/i });
+    fireEvent.click(techTab);
+
+    // Should display Address: label
+    expect(screen.getByText('Address:')).toBeInTheDocument();
+    expect(screen.getByText(walletAddress)).toBeInTheDocument();
+
+    // Should NOT display DID: label
+    expect(screen.queryByText('DID:')).not.toBeInTheDocument();
+
+    // Explorer link should be present and point to the address URL
+    const explorerLink = screen.getByTitle('View on CKB Explorer');
+    expect(explorerLink).toBeInTheDocument();
+    expect(explorerLink).toHaveAttribute('href', expect.stringContaining(`/address/${walletAddress}`));
+    expect(explorerLink).toHaveAttribute('target', '_blank');
+
+    // Copy Address button should be present
+    const copyButton = screen.getByTitle('Copy Address');
+    expect(copyButton).toBeInTheDocument();
+  });
+
+  it('displays DID with copy button only and no explorer link when recipient has a DID', () => {
+    const did = 'did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc';
+    const didCert: CertificateDNA = {
+      ...mockCert,
+      credentialSubject: {
+        ...mockCert.credentialSubject,
+        id: did,
+      },
+    };
+
+    render(
+      <CertificateDetail
+        certificate={didCert}
+        certificateId="cert_did_123"
+      />
+    );
+
+    // Switch to Technical / On-Chain Proof mode
+    const techTab = screen.getByRole('button', { name: /On-Chain Proof/i });
+    fireEvent.click(techTab);
+
+    // Should display DID: label and value
+    expect(screen.getByText('DID:')).toBeInTheDocument();
+    expect(screen.getByText(did)).toBeInTheDocument();
+
+    // Should have Copy DID button
+    const copyDidButton = screen.getByTitle('Copy DID');
+    expect(copyDidButton).toBeInTheDocument();
+
+    // Should NOT have Address: row or explorer link for DID
+    expect(screen.queryByText('Address:')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('View on CKB Explorer')).not.toBeInTheDocument();
+  });
+
+  it('displays both DID and resolved Address when recipient has a DID with walletAddress', () => {
+    const did = 'did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc';
+    const walletAddress = 'ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790twu';
+    const didCertWithWallet: CertificateDNA = {
+      ...mockCert,
+      credentialSubject: {
+        ...mockCert.credentialSubject,
+        id: did,
+        walletAddress,
+      },
+    };
+
+    render(
+      <CertificateDetail
+        certificate={didCertWithWallet}
+        certificateId="cert_did_wallet_123"
+      />
+    );
+
+    // Switch to Technical / On-Chain Proof mode
+    const techTab = screen.getByRole('button', { name: /On-Chain Proof/i });
+    fireEvent.click(techTab);
+
+    // Both DID and Address should be displayed
+    expect(screen.getByText('DID:')).toBeInTheDocument();
+    expect(screen.getByText(did)).toBeInTheDocument();
+    expect(screen.getByTitle('Copy DID')).toBeInTheDocument();
+
+    expect(screen.getByText('Address:')).toBeInTheDocument();
+    expect(screen.getByText(walletAddress)).toBeInTheDocument();
+    expect(screen.getByTitle('Copy Address')).toBeInTheDocument();
+    expect(screen.getByTitle('View on CKB Explorer')).toHaveAttribute(
+      'href',
+      expect.stringContaining(`/address/${walletAddress}`)
+    );
+  });
 });

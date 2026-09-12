@@ -4,7 +4,8 @@ import { Modal, Card, Badge, Button, Input } from '@/components/ui';
 import type { CertificateDNA, CertificateLayout, CertificateTheme } from '@/types';
 import { formatDate, truncateAddress, copyToClipboard, cn } from '@/utils';
 import { formatCertificateDisplay, isExpired } from '@/lib/credentials';
-import { getTransactionUrl } from '@/lib/ckb';
+import { getTransactionUrl, getAddressUrl } from '@/lib/ckb';
+import { isDidInput } from '@/lib/did';
 import {
   Award,
   Calendar,
@@ -18,6 +19,7 @@ import {
   Printer,
   Eye,
   ShieldCheck,
+  Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNetwork } from '@/hooks';
@@ -48,6 +50,7 @@ export function CertificateDetail({
   const { explorerUrl } = useNetwork();
   const [viewMode, setViewMode] = useState<'visual' | 'technical'>('visual');
   const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showMeltModal, setShowMeltModal] = useState(false);
   const [meltReason, setMeltReason] = useState('');
   const [meltModalError, setMeltModalError] = useState<string | null>(null);
@@ -56,6 +59,21 @@ export function CertificateDetail({
   const expired = isExpired(certificate);
   const subject = certificate.credentialSubject || { type: 'CourseCertificate' };
   const metadata = subject.metadata;
+
+  const isRecipientDid = Boolean(
+    subject.id && (subject.id.startsWith('did:') || isDidInput(subject.id))
+  );
+  const recipientAddress = !isRecipientDid
+    ? (subject.id || subject.walletAddress)
+    : subject.walletAddress;
+
+  const handleCopyField = async (text: string, field: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
 
   const initialLayout: CertificateLayout =
     (metadata?.layout as CertificateLayout) || 'classic';
@@ -206,17 +224,50 @@ export function CertificateDetail({
                 <User className="w-4 h-4 text-mid-ash" />
                 <span className="text-bone-white font-medium">{display.recipient}</span>
               </div>
-              {subject.id && (
+              {isRecipientDid && (
                 <div className="flex items-center gap-3">
-                  <span className="w-4 h-4 flex items-center justify-center text-xs text-mid-ash">🔗</span>
-                  <span className="text-mid-ash">DID:</span>
+                  <span className="w-4 h-4 flex items-center justify-center text-xs text-mid-ash flex-shrink-0">🔗</span>
+                  <span className="text-mid-ash flex-shrink-0">DID:</span>
                   <span className="text-bone-white font-mono text-xs flex-1 truncate">{subject.id}</span>
                   <button
-                    onClick={() => copyToClipboard(subject.id || '')}
-                    className="text-mid-ash hover:text-lavender-spark transition-colors"
+                    type="button"
+                    onClick={() => handleCopyField(subject.id || '', 'did')}
+                    className="text-mid-ash hover:text-lavender-spark transition-colors flex-shrink-0"
                     title="Copy DID"
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    {copiedField === 'did' ? (
+                      <Check className="w-3.5 h-3.5 text-signal-green" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              )}
+              {recipientAddress && (
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-4 h-4 text-mid-ash flex-shrink-0" />
+                  <span className="text-mid-ash flex-shrink-0">Address:</span>
+                  <a
+                    href={explorerUrl ? `${explorerUrl}/address/${recipientAddress}` : getAddressUrl(recipientAddress)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 flex items-center gap-1.5 text-bone-white hover:text-lavender-spark hover:underline font-mono text-xs group"
+                    title="View on CKB Explorer"
+                  >
+                    <span className="truncate">{recipientAddress}</span>
+                    <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 text-mid-ash group-hover:text-lavender-spark transition-colors" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyField(recipientAddress, 'address')}
+                    className="text-mid-ash hover:text-lavender-spark transition-colors flex-shrink-0"
+                    title="Copy Address"
+                  >
+                    {copiedField === 'address' ? (
+                      <Check className="w-3.5 h-3.5 text-signal-green" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
                   </button>
                 </div>
               )}

@@ -85,7 +85,7 @@ describe('BatchUpload Component', () => {
     expect(parsed).toHaveLength(2);
 
     expect(parsed[0]).toMatchObject({
-      recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      recipientAddress: 'ckt1qrejnmlar3r452tcg57gvq8patctcgy8acync0hxfnyka35ywafvkqgj2xytre60kv8kr43syxjj45769h77qzd5qq790abc',
       recipientName: 'John Doe',
       courseName: 'CKB Basics',
       layout: 'classic',
@@ -94,7 +94,7 @@ describe('BatchUpload Component', () => {
     });
 
     expect(parsed[1]).toMatchObject({
-      recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      recipientAddress: 'ckt1qrfrwcdnvssswdwpn3s9v8fp87emat306ctjwsm3nmlkjg8qyza2cqgqqx5zp6gss3dk2twvx36e9pz449rthejplgx6gxyz',
       recipientName: 'Jane Smith',
       courseName: 'CKB Basics',
       layout: 'modern',
