@@ -570,6 +570,226 @@ describe('Certificate Service (Issuer)', () => {
         meltCertificate(mockEvilSigner as unknown, issued.certificateId)
       ).rejects.toThrow('Only the certificate holder can melt this certificate');
     });
+
+    // Test 1: melts only the target certificate when multiple certificates exist in cache
+    it('should melt only the target certificate when multiple certificates exist in cache', async () => {
+      // 1. Issue Certificate A
+      const issuedA = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Course A', completionDate: '2024-01-01' },
+      });
+
+      // 2. Issue Certificate B
+      const issuedB = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Course B', completionDate: '2024-02-01' },
+      });
+
+      expect(issuedA.certificateId).not.toEqual(issuedB.certificateId);
+
+      const mockClient = {
+        getCell: vi.fn().mockResolvedValue({
+          output: {
+            lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+          },
+          outPoint: { txHash: issuedB.transactionHash, index: '0x0' },
+        }),
+      };
+
+      const mockHolderSigner = {
+        client: mockClient,
+        sendTransaction: vi.fn().mockResolvedValue('0x' + 'c'.repeat(64)),
+        signTransaction: vi.fn().mockReturnValue({}),
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => validRecipientAddress,
+          script: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      // Mock findSpore to return cell matching the queried ID
+      vi.mocked(findSpore).mockImplementation(async (_client, id) => {
+        const idStr = String(id);
+        if (idStr === issuedA.sporeId || idStr === issuedA.certificateId) {
+          return {
+            cell: {
+              cellOutput: {
+                lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+              },
+              outputData: new TextEncoder().encode(JSON.stringify({
+                '@context': ['https://www.w3.org/2018/credentials/v1'],
+                id: issuedA.certificateId,
+                type: ['VerifiableCredential', 'CourseCertificate'],
+                issuer: { id: testClusterId },
+                credentialSubject: { type: 'CourseCertificate' },
+              })),
+            },
+          } as any;
+        }
+        if (idStr === issuedB.sporeId || idStr === issuedB.certificateId) {
+          return {
+            cell: {
+              cellOutput: {
+                lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+              },
+              outputData: new TextEncoder().encode(JSON.stringify({
+                '@context': ['https://www.w3.org/2018/credentials/v1'],
+                id: issuedB.certificateId,
+                type: ['VerifiableCredential', 'CourseCertificate'],
+                issuer: { id: testClusterId },
+                credentialSubject: { type: 'CourseCertificate' },
+              })),
+            },
+          } as any;
+        }
+        return undefined;
+      });
+
+      const mockTx = {
+        completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+        completeFeeBy: vi.fn().mockResolvedValue(undefined),
+      };
+      vi.mocked(meltSpore).mockResolvedValue({ tx: mockTx as any });
+
+      // Action: Melt Certificate B
+      const { meltCertificate: meltCert } = await import('../../../src/lib/credentials/issuer');
+      const result = await meltCert(mockHolderSigner, issuedB.certificateId);
+
+      expect(result.transactionHash).toBeDefined();
+
+      // Assert: meltSpore must be called with Certificate B's sporeId, NOT Certificate A
+      expect(vi.mocked(meltSpore)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: issuedB.sporeId,
+        })
+      );
+      expect(vi.mocked(meltSpore)).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: issuedA.sporeId,
+        })
+      );
+
+      // Certificate A must still exist in cache
+      const certAAfter = await getCertificate(issuedA.certificateId);
+      expect(certAAfter).not.toBeNull();
+
+      // Certificate B must be removed from cache
+      const certBAfter = await getCertificate(issuedB.certificateId);
+      expect(certBAfter).toBeNull();
+    });
+
+    // Test 2: does not melt Certificate A if Certificate B cell is pending/not found on-chain
+    it('should fail and not melt Certificate A if Certificate B cell is not found on-chain', async () => {
+      // 1. Issue Certificate A (confirmed)
+      const issuedA = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Course A', completionDate: '2024-01-01' },
+      });
+
+      // 2. Issue Certificate B (simulating pending / unindexed)
+      const issuedB = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Course B', completionDate: '2024-02-01' },
+      });
+
+      const mockHolderSigner = {
+        client: { getCell: vi.fn().mockResolvedValue(null) },
+        sendTransaction: vi.fn().mockResolvedValue('0x' + 'c'.repeat(64)),
+        signTransaction: vi.fn().mockReturnValue({}),
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => validRecipientAddress,
+          script: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      // Mock findSpore: A exists, B does NOT exist yet (pending)
+      vi.mocked(findSpore).mockImplementation(async (_client, id) => {
+        const idStr = String(id);
+        if (idStr === issuedA.sporeId || idStr === issuedA.certificateId) {
+          return {
+            cell: {
+              cellOutput: {
+                lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+              },
+            },
+          } as any;
+        }
+        return undefined;
+      });
+
+      // Melting Certificate B must reject with error and NOT melt Certificate A
+      const { meltCertificate: meltCert } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        meltCert(mockHolderSigner, issuedB.certificateId)
+      ).rejects.toThrow(/could not be found on CKB/);
+
+      // Verify meltSpore was NEVER called
+      expect(vi.mocked(meltSpore)).not.toHaveBeenCalled();
+
+      // Certificate A must still exist in cache
+      const certA = await getCertificate(issuedA.certificateId);
+      expect(certA).not.toBeNull();
+    });
+
+    // Test 3: DNA verification - must not melt wrong certificate even if sporeId exists
+    it('should verify DNA content matches before melting', async () => {
+      // Issue Certificate B (the target)
+      const issuedB = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Course B', completionDate: '2024-02-01' },
+      });
+
+      const mockHolderSigner = {
+        client: { getCell: vi.fn().mockResolvedValue(null) },
+        sendTransaction: vi.fn().mockResolvedValue('0x' + 'c'.repeat(64)),
+        signTransaction: vi.fn().mockReturnValue({}),
+        getRecommendedAddressObj: vi.fn().mockResolvedValue({
+          toString: () => validRecipientAddress,
+          script: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+        }),
+      };
+
+      // Mock findSpore returns a cell but with WRONG DNA (simulating collision)
+      vi.mocked(findSpore).mockImplementation(async (_client, id) => {
+        const idStr = String(id);
+        // When querying Certificate B's sporeId, return a cell with Certificate A's DNA
+        if (idStr === issuedB.sporeId) {
+          return {
+            cell: {
+              cellOutput: {
+                lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
+              },
+              outputData: new TextEncoder().encode(JSON.stringify({
+                '@context': ['https://www.w3.org/2018/credentials/v1'],
+                id: '0x' + 'aa'.repeat(16), // WRONG DNA ID!
+                type: ['VerifiableCredential', 'CourseCertificate'],
+                issuer: { id: testClusterId },
+                credentialSubject: { type: 'CourseCertificate' },
+              })),
+            },
+          } as any;
+        }
+        return undefined;
+      });
+
+      // Should reject because DNA does not match
+      const { meltCertificate: meltCert } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        meltCert(mockHolderSigner, issuedB.certificateId)
+      ).rejects.toThrow(/could not be found on CKB|DNA mismatch/);
+
+      // meltSpore must NEVER be called
+      expect(vi.mocked(meltSpore)).not.toHaveBeenCalled();
+    });
   });
 });
 
