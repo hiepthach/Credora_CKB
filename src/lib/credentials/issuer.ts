@@ -666,9 +666,14 @@ export async function meltCertificate(
       if (found?.cell) {
         // CRITICAL: Verify DNA matches the target certificate
         const certDna = extractCertificateFromCell(found.cell.outputData);
-        if (certDna?.id && certRecord?.certificate?.id) {
-          if (certDna.id !== certRecord.certificate.id) {
-            // DNA mismatch - this is NOT the target certificate, continue searching
+        if (certRecord?.certificate?.id) {
+          const matchesDna =
+            certDna?.id &&
+            (certDna.id === certRecord.certificate.id ||
+             certDna.id === certRecord.sporeId ||
+             certDna.id === certRecord.certificateId);
+          if (!matchesDna) {
+            // DNA mismatch or missing - this is NOT the target certificate, continue searching
             continue;
           }
         }
@@ -694,8 +699,13 @@ export async function meltCertificate(
               if (found?.cell) {
                 // Verify DNA matches the target certificate
                 const certDna = extractCertificateFromCell(found.cell.outputData);
-                if (certDna?.id && certRecord?.certificate?.id) {
-                  if (certDna.id !== certRecord.certificate.id) {
+                if (certRecord?.certificate?.id) {
+                  const matchesDna =
+                    certDna?.id &&
+                    (certDna.id === certRecord.certificate.id ||
+                     certDna.id === certRecord.sporeId ||
+                     certDna.id === certRecord.certificateId);
+                  if (!matchesDna) {
                     continue;
                   }
                 }
@@ -707,24 +717,6 @@ export async function meltCertificate(
             } catch {}
           }
         }
-      }
-    } catch {}
-  }
-
-  // Fallback: check direct cell by txHash from record
-  if (!foundCell && certRecord.transactionHash && liveSigner.client && typeof (liveSigner.client as any).getCell === 'function') {
-    try {
-      const cell = await (liveSigner.client as any).getCell({
-        txHash: certRecord.transactionHash,
-        index: '0x0'
-      });
-      const cellOutput = (cell as any)?.cellOutput || (cell as any)?.output;
-      if (cellOutput?.lock) {
-        cellLock = cellOutput.lock;
-        foundCell = true;
-      }
-      if (!targetSporeId && cellOutput?.type?.args) {
-        targetSporeId = cellOutput.type.args as `0x${string}`;
       }
     } catch {}
   }

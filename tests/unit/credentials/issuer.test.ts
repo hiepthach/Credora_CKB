@@ -478,6 +478,13 @@ describe('Certificate Service (Issuer)', () => {
           cellOutput: {
             lock: { args: validRecipientAddress, codeHash: '0xabcd', hashType: 'type' },
           },
+          outputData: new TextEncoder().encode(JSON.stringify({
+            '@context': ['https://www.w3.org/2018/credentials/v1'],
+            id: issued.certificateId,
+            type: ['VerifiableCredential', 'CourseCertificate'],
+            issuer: { id: testClusterId },
+            credentialSubject: { type: 'CourseCertificate' },
+          })),
         },
       } as any);
 
@@ -545,16 +552,25 @@ describe('Certificate Service (Issuer)', () => {
         subject: { id: validRecipientAddress, type: 'CourseCertificate', courseName: 'Test', completionDate: '2024-01-01' },
       });
 
+      // Mock findSpore to return the cell owned by the holder
+      vi.mocked(findSpore).mockResolvedValue({
+        cell: {
+          cellOutput: {
+            lock: { args: '0x1234', codeHash: '0xabcd', hashType: 'type' },
+          },
+          outputData: new TextEncoder().encode(JSON.stringify({
+            '@context': ['https://www.w3.org/2018/credentials/v1'],
+            id: issued.certificateId,
+            type: ['VerifiableCredential', 'CourseCertificate'],
+            issuer: { id: testClusterId },
+            credentialSubject: { type: 'CourseCertificate' },
+          })),
+        },
+      } as any);
+
       // Mock signer whose lock does NOT match the certificate holder's lock
       const mockEvilSigner = {
-        client: {
-          getCell: vi.fn().mockResolvedValue({
-            output: {
-              // Cell is owned by holder (matches validRecipientAddress's lock)
-              lock: { args: '0x1234', codeHash: '0xabcd', hashType: 'type' },
-            },
-          }),
-        } as unknown,
+        client: {},
         sendTransaction: vi.fn(),
         signTransaction: vi.fn().mockReturnValue({}),
         // But this signer pretends to be someone else (different address)
