@@ -524,7 +524,7 @@ flowchart TD
 
 ---
 
-## 8. Custom On-Chain Scripts (Future)
+## 8. Custom On-Chain Scripts & Ecosystem Interoperability
 
 ### 8.1 Soulbound Certificate Script
 
@@ -548,6 +548,34 @@ graph LR
     CHECK -->|Different owner| REJECT
     PASS --> OUTPUT
 ```
+
+### 8.2 Vellum dApp Integration Concept
+
+Credora integrates with [Vellum](https://usevellum.xyz/) to provide portable identity and builder reputation for course graduates:
+
+1. **Phase 1 (Live on Testnet): `did:ckb` Recipient Resolution:**
+   - Uses `@ckb-ccc/did-ckb` to resolve `did:ckb:...` identifiers to current on-chain lock scripts.
+   - Embeds persistent DID URI into `credentialSubject.id` for W3C Verifiable Credential compliance.
+2. **Phase 2 (Proposed / In Progress): Dual-Output Transaction Architecture:**
+   - Follows Vellum's upcoming Claim Cell protocol (currently in PR review on [truthixify/vellum](https://github.com/truthixify/vellum/tree/main)).
+   - In a single atomic transaction, the Issuer mints both a rich Spore DOB (Output 0) and a companion Vellum Claim Cell (Output 1).
+   - Solves the **wallet lock rotation** problem by delegating claim ownership verification to the recipient's DID Cell.
+
+```mermaid
+graph TD
+    subgraph MintTx["Atomic Dual-Output Mint Transaction"]
+        IN["Issuer Funding Inputs<br/>(Capacity for DOB + Claim Cell + Fees)"]
+        
+        OUT0["Output 0: Spore DOB Cell<br/>• Lock: Recipient Wallet<br/>• Type: Spore Type Script<br/>• Data: SVG Layout + Full W3C JSON VC<br/>(Rich Certificate for Display & PDF on Credora)"]
+        
+        OUT1["Output 1: Vellum Claim Cell<br/>• Lock: Claim Lock (Bound to Recipient DID)<br/>• Type: Claim Type<br/>• Data: Attestation referencing Spore ID<br/>(Aggregatable Reputation Signal for Vellum)"]
+    end
+
+    IN --> OUT0
+    IN --> OUT1
+```
+
+> For details on the conceptual integration model, see [09_Vellum_Integration_Design.md](file:///home/hiepthach/04_CKB/dob-project/docs/Design_spec/09_Vellum_Integration_Design.md).
 
 ---
 
@@ -626,7 +654,9 @@ gantt
 | **Week 9** | Project Setup & Provider Registration | Scaffold, wallet connection, Cluster creation |
 | **Week 10** | Certificate Issuance & View | Issuance, W3C VC encoding, holder dashboard |
 | **Week 11** | Verification & Extended Features | Verify, templates, batch, melt certificate |
-| **Week 12** | Polish & Documentation | Error handling, testing, README, demo |
+| **Week 12** | Polish & Documentation | Error handling, testing, README, demo materials |
+| **Week 13** | DID (did:ckb) Integration | Recipient resolution via `@ckb-ccc/did-ckb`, portable identity, backward compatibility |
+| **Phase 2 (Roadmap)** | Vellum Claim Cell Integration | Dual-Output issuance flow (conceptual proposal), reputation linking |
 
 ---
 
@@ -654,7 +684,9 @@ gantt
 | Certificate Templates | ✅ | Week 11 |
 | Batch Issuance | ✅ | Week 11 |
 | Expiration | ✅ | Week 11 |
-| Revocation | ✅ | Week 11 |
+| Revocation (Melt) | ✅ | Week 11 |
+| DID Recipient Resolution | ✅ | Week 13 |
+| Vellum Claim Cell Integration | 📋 Proposed (WIP) | Phase 2 |
 
 ---
 
