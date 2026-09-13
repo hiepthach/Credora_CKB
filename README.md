@@ -1,5 +1,9 @@
 # Credora (CKB Credential Registry)
 
+
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org)
+
 A verifiable credentials system built on Nervos CKB using the Spore Protocol. Issue, manage, and verify course completion certificates as on-chain credentials.
 
 ## Tech Stack
@@ -42,27 +46,27 @@ Click the network selector in the top-right corner to switch between:
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── clusters/          # Cluster management page
-│   ├── certificates/      # Certificate pages
-│   │   ├── page.tsx      # My certificates list
-│   │   └── issue/        # Issue certificate page
-│   └── verify/           # Certificate verification
+├── app/                       # Next.js App Router pages
+│   ├── clusters/             # Cluster management page
+│   ├── certificates/          # Certificate pages
+│   │   ├── page.tsx           # My certificates list
+│   │   └── issue/             # Issue certificate page
+│   └── verify/                # Certificate verification
 ├── components/
-│   ├── ui/               # Base UI components
-│   ├── wallet/           # Wallet connection
-│   ├── cluster/          # Cluster components
-│   ├── certificate/      # Certificate components
-│   ├── template/         # Template components
-│   ├── batch/            # Batch issuance
-│   └── verification/     # Verification components
+│   ├── ui/                    # Base UI components
+│   ├── wallet/                # Wallet connection
+│   ├── cluster/               # Cluster components
+│   ├── certificate/           # Certificate components
+│   ├── template/              # Template components
+│   ├── batch/                 # Batch issuance
+│   └── verification/          # Verification components
 ├── lib/
-│   ├── ckb/              # CKB config & client
-│   ├── credentials/       # Core credential logic
-│   └── did/              # DID resolution & formatting utilities
-├── types/                # TypeScript types
-├── hooks/                # Custom React hooks
-└── utils/                # Utility functions
+│   ├── ckb/                   # CKB config & client
+│   ├── credentials/           # Core credential logic
+│   └── did/                   # DID resolution & formatting utilities
+├── types/                     # TypeScript types
+├── hooks/                     # Custom React hooks
+└── utils/                     # Utility functions
 ```
 
 ## Features
@@ -74,7 +78,7 @@ src/
 - [x] Certificate Verification
 - [x] Share Functionality (Copy ID, Native Share, Explorer Link)
 
-### Extended Features (Week 11)
+### Enhanced Features
 - [x] Certificate Templates
   - Visual template configuration (classic, modern, compact, badge, detailed layouts)
   - Customizable colors, typography, and branding
@@ -92,7 +96,7 @@ src/
   - Reclaims locked CKB capacity
   - Melted certificates are no longer verifiable on-chain
 
-### DID (did:ckb) Integration (Week 13)
+### Identity & DID Integration
 - [x] DID Recipient Support
   - Issue certificates to did:ckb: identifiers
   - Automatic DID resolution to on-chain lock script
@@ -103,30 +107,58 @@ src/
   - Backward compatible with address-only certificates
   - Batch issuance supports mixed DID/address recipients
 
-### Quality & Polish (Week 12)
+### Strategic Roadmap: Vellum Claim Cell Integration
+- [ ] **Dual-Output Minting Transaction:** Atomic mint creating both Spore DOB and Vellum Claim Cell in a single transaction.
+- [ ] **Lock Rotation Resilience:** Delegated lock ownership via recipient DID Cell, ensuring credentials survive wallet rotations indefinitely.
+- [ ] **Reputation Scoring:** Standardized attestation enabling Vellum to index and aggregate builder course completions without parsing heterogeneous Spore JSON.
+- [ ] **Cross-Platform Verification:** Direct deep-link between Credora verifiable certificates and Vellum builder profiles.
+
+### Quality & Polish
 - [x] Error Handling (Error boundary, Alert component, CKB RPC error formatter)
 - [x] Loading States (Spinner component, route loading fallbacks)
 - [x] Empty States (EmptyState component across all views)
-- [x] Unit Tests (280+ tests passing)
+- [x] Unit Tests (289+ tests passing)
 - [x] Integration Tests (Lifecycle, batch issuance flow, DID resolution)
-- [] Demo/Screencast
+- [x] Sample Datasets (`public/samples/sample_recipients.csv` & `sample_recipients.json`)
 
-## DID (did:ckb) Support
+## Ecosystem Interoperability: Vellum & did:ckb Integration
 
-CertifyCKB supports issuing certificates to [did:ckb](https://vellum-lyart.vercel.app) identifiers, enabling portable identity for certificate recipients.
+Credora connects with [Vellum](https://usevellum.xyz/) ([GitHub](https://github.com/truthixify/vellum/tree/main)) and the official `@ckb-ccc/did-ckb` library to provide portable identity and reputation for course graduates.
 
-**Benefits:**
-- Recipients can change wallets without losing certificates
-- Certificates are linked to the recipient's DID, not a specific wallet address
-- Visual DID badge shows verification status
+```mermaid
+graph TD
+    subgraph SingleTx["Single Minting Transaction on CKB"]
+        FUNDS["Issuer Balance"]
+        
+        OUT0["Output 0: Spore DOB Cell<br/>(Rich Certificate: Theme, SVG Layout, W3C VC JSON)<br/>▶ Display & Public Verification on Credora"]
+        OUT1["Output 1: Vellum Claim Cell<br/>(Lightweight Attestation + Issuer Signature)<br/>▶ Indexed by Vellum for Builder Reputation Scoring"]
+    end
 
-**Usage:**
-1. When issuing a certificate, enter the recipient's DID instead of their wallet address
-2. The system automatically resolves the DID to the current wallet address
-3. View certificates with DID recipients - they show a DID badge linking to Vellum
+    FUNDS --> OUT0
+    FUNDS --> OUT1
+```
 
-**For Recipients:**
-If you have a DID registered on [Vellum](https://vellum-lyart.vercel.app), any certificates issued to your DID will automatically appear in your certificate list, even if you change wallets.
+### Two-Tier Integration Architecture
+
+| Tier | Protocol / Standard | Status | Capability |
+|---|---|---|---|
+| **Phase 1: Identity & Resolution** | `@ckb-ccc/did-ckb` | **LIVE (Testnet)** | Resolve `did:ckb:...` to active CKB lock; store DID in `credentialSubject.id` for W3C compliance. |
+| **Phase 2: Dual-Output Attestation** | Vellum Claim Cell ([PR #31](https://github.com/truthixify/vellum/pull/31)) | **Proposed / In Progress** | Mint atomic Spore DOB + Vellum Claim Cell; immune to wallet lock rotations; powers builder score. |
+
+### Phase 1 (Current): `did:ckb` Recipient Resolution
+Credora natively supports issuing course certificates directly to `did:ckb` identifiers:
+1. When issuing a certificate (single or batch CSV/JSON), input the recipient's `did:ckb:...` URI instead of an address.
+2. Credora automatically resolves the DID to the recipient's current on-chain lock script.
+3. The issued Spore DOB embeds the DID identifier into the W3C Verifiable Credential payload.
+4. Certificates display a verified DID badge linking directly to the recipient's profile on [Vellum](https://usevellum.xyz/).
+
+### Phase 2 (Upcoming Concept): Dual-Output Transaction Flow
+* **The Context:** When a user rotates their wallet key (e.g. upgrades to JoyID Passkey), a standard Spore DOB remains locked under the previous key. Furthermore, Vellum cannot index arbitrary Spore JSON schemas across different dApps.
+* **The Solution:** Credora explores a dual-output issuance flow — in a single transaction, the issuer creates:
+  - **Output 0 (Spore DOB):** The rich, visual, self-contained educational diploma.
+  - **Output 1 (Vellum Claim Cell):** A compact attestation referencing the `spore_id` and signed by the Credora Issuer.
+* **Lock Rotation Solved:** Claim Cells delegate spending authorization to the recipient's DID Cell. When the recipient updates their wallet on Vellum, their Claim Cell automatically tracks the new key.
+* **Full Specification:** See [Vellum Integration Design Concept](docs/Design_spec/09_Vellum_Integration_Design.md).
 
 ## Wallet Support
 
