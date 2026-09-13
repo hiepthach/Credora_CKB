@@ -216,14 +216,19 @@ export async function getCertificate(
     };
   }
 
-  // 2. Search local cache by transaction hash
+  // 2. Search local cache by various identifiers
   for (const [id, item] of certificateCache.entries()) {
-    if (item.txHash === certificateId) {
+    if (
+      id === certificateId ||
+      item.sporeId === certificateId ||
+      item.certificate?.id === certificateId ||
+      item.txHash === certificateId
+    ) {
       return {
         certificate: item.certificate,
-        certificateId: id,
+        certificateId: item.sporeId || id,
         transactionHash: item.txHash,
-        clusterId: item.certificate.issuer.id,
+        clusterId: item.certificate.issuer?.id,
         sporeId: item.sporeId,
       };
     }
@@ -459,7 +464,6 @@ export async function getAllCertificates(
 ): Promise<GetCertificateResult[]> {
   const results: GetCertificateResult[] = [];
   const seenIds = new Set<string>();
-  const seenByTxHash = new Map<string, GetCertificateResult>();
 
   // Helper to add certificate with deduplication
   const addCertificate = (item: GetCertificateResult) => {
@@ -473,19 +477,11 @@ export async function getAllCertificates(
       return;
     }
 
-    // Also deduplicate by txHash - if we already have a cert with this txHash, skip
-    if (item.transactionHash && seenByTxHash.has(item.transactionHash)) {
-      return;
-    }
-
     // Add to results
     results.push(item);
     seenIds.add(item.certificateId);
     if (item.sporeId) seenIds.add(item.sporeId);
-    if (item.transactionHash) {
-      seenIds.add(item.transactionHash);
-      seenByTxHash.set(item.transactionHash, item);
-    }
+    if (item.transactionHash) seenIds.add(item.transactionHash);
     if (item.certificate?.id) seenIds.add(item.certificate.id);
   };
 
@@ -639,7 +635,7 @@ export async function meltCertificate(
   // Try multiple candidate IDs to find the actual Spore cell
   const candidateIds: string[] = [];
 
-  // Priority 1: Use sporeId from record if available
+  // Priority 1: Use sporeId from THIS certificate's record if available
   if (targetSporeId && targetSporeId.startsWith('0x') && targetSporeId.length === 66) {
     candidateIds.push(targetSporeId);
   }
@@ -649,13 +645,17 @@ export async function meltCertificate(
     candidateIds.push(certificateId);
   }
 
-  // Priority 3: Search through all local cache entries for a matching certificate
-  for (const [key, item] of certificateCache.entries()) {
-    if (item.sporeId && item.sporeId.startsWith('0x') && item.sporeId.length === 66) {
-      if (!candidateIds.includes(item.sporeId)) candidateIds.push(item.sporeId);
-    }
-    if (item.txHash && item.txHash.startsWith('0x') && item.txHash.length === 66) {
-      if (!candidateIds.includes(item.txHash)) candidateIds.push(item.txHash);
+  // Priority 3: Only check THIS certificate's cached data for additional IDs
+  // NEVER iterate over all certificates - that causes cross-melt bugs!
+  if (certRecord) {
+    // Add THIS certificate's transaction hash as fallback
+    if (
+      certRecord.transactionHash &&
+      certRecord.transactionHash.startsWith('0x') &&
+      certRecord.transactionHash.length === 66 &&
+      !candidateIds.includes(certRecord.transactionHash)
+    ) {
+      candidateIds.push(certRecord.transactionHash);
     }
   }
 
@@ -664,6 +664,15 @@ export async function meltCertificate(
     try {
       const found = await findSpore(liveSigner.client, candidateId as `0x${string}`);
       if (found?.cell) {
+        // CRITICAL: Verify DNA matches the target certificate
+        const certDna = extractCertificateFromCell(found.cell.outputData);
+        if (certDna?.id && certRecord?.certificate?.id) {
+          if (certDna.id !== certRecord.certificate.id) {
+            // DNA mismatch - this is NOT the target certificate, continue searching
+            continue;
+          }
+        }
+        // DNA verified or no DNA to compare - accept this cell
         targetSporeId = candidateId as `0x${string}`;
         cellLock = found.cell.cellOutput.lock;
         foundCell = true;
@@ -726,8 +735,8 @@ export async function meltCertificate(
 
   if (!foundCell || !targetSporeId) {
     throw new Error(
-      `The Spore cell could not be found on CKB. It may have already been melted or transferred. ` +
-      `Certificate ID: ${certificateId.slice(0, 16)}...`
+      `The Spore cell for certificate "${certificateId.slice(0, 16)}..." could not be found on CKB. ` +
+      `It may still be confirming in the mempool, or has already been melted.`
     );
   }
 
@@ -758,14 +767,18 @@ export async function meltCertificate(
       certRecord?.transactionHash,
     ].filter((k): k is string => Boolean(k));
 
-    // Also search for any entries matching the sporeId or txHash
+    // Also search for any entries matching this specific certificate
     for (const [key, item] of certificateCache.entries()) {
-      if (
+      // Only delete entries that belong to THIS certificate
+      const belongsToThisCert =
         key === certificateId ||
         key === targetSporeId ||
         item.sporeId === targetSporeId ||
-        (certRecord?.transactionHash && item.txHash === certRecord.transactionHash)
-      ) {
+        (certRecord?.certificate?.id && item.certificate?.id === certRecord.certificate.id) ||
+        // Only delete by txHash if sporeId also matches (avoids deleting unrelated certs with same txHash)
+        (certRecord?.transactionHash && item.txHash === certRecord.transactionHash && item.sporeId === targetSporeId);
+
+      if (belongsToThisCert) {
         if (!keysToDelete.includes(key)) {
           keysToDelete.push(key);
         }
