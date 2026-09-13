@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CertificateDetail } from '@/components/certificate/CertificateDetail';
 import type { CertificateDNA } from '@/types';
 
@@ -126,6 +126,73 @@ describe('CertificateDetail Component View Toggle', () => {
     fireEvent.click(techTab);
     const techMeltBtns = screen.getAllByRole('button', { name: /Melt & Reclaim CKB/i });
     expect(techMeltBtns.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('displays success popup on melt success and calls onMeltSuccess when closed', async () => {
+    const mockMelt = vi.fn().mockResolvedValue(undefined);
+    const mockMeltSuccess = vi.fn();
+
+    render(
+      <CertificateDetail
+        certificate={mockCert}
+        certificateId="cert_gh_123"
+        onMelt={mockMelt}
+        onMeltSuccess={mockMeltSuccess}
+      />
+    );
+
+    // Open modal
+    const meltBtn = screen.getByRole('button', { name: /Melt & Reclaim CKB/i });
+    fireEvent.click(meltBtn);
+
+    // Click confirm melt in modal
+    const confirmBtn = screen.getByRole('button', { name: /Melt & Reclaim$/i });
+    fireEvent.click(confirmBtn);
+
+    expect(mockMelt).toHaveBeenCalled();
+
+    // Success popup should be displayed
+    await waitFor(() => {
+      expect(screen.getByText('Certificate Melted Successfully')).toBeInTheDocument();
+    });
+
+    // Close button should be present
+    const closeBtn = screen.getByRole('button', { name: /^Close$/i });
+    expect(closeBtn).toBeInTheDocument();
+
+    fireEvent.click(closeBtn);
+    expect(mockMeltSuccess).toHaveBeenCalled();
+  });
+
+  it('displays error inside modal when melting fails without navigating away', async () => {
+    const mockMelt = vi.fn().mockRejectedValue(new Error('Transaction rejected by user'));
+    const mockMeltSuccess = vi.fn();
+
+    render(
+      <CertificateDetail
+        certificate={mockCert}
+        certificateId="cert_gh_123"
+        onMelt={mockMelt}
+        onMeltSuccess={mockMeltSuccess}
+      />
+    );
+
+    // Open modal
+    const meltBtn = screen.getByRole('button', { name: /Melt & Reclaim CKB/i });
+    fireEvent.click(meltBtn);
+
+    // Click confirm melt
+    const confirmBtn = screen.getByRole('button', { name: /Melt & Reclaim$/i });
+    fireEvent.click(confirmBtn);
+
+    // Error should be displayed inside modal
+    await waitFor(() => {
+      expect(screen.getByText('Transaction rejected by user')).toBeInTheDocument();
+    });
+    expect(mockMeltSuccess).not.toHaveBeenCalled();
+
+    // Modal should remain open with Close button
+    expect(screen.getByRole('button', { name: /^Close$/i })).toBeInTheDocument();
   });
 
   it('displays Address with explorer link and copy button when recipient has a wallet address', () => {

@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  CheckCircle2,
   AlertTriangle,
   Flame,
   Printer,
@@ -34,6 +35,7 @@ interface CertificateDetailProps {
   onOpenExplorer?: () => void;
   onShare?: () => void;
   onMelt?: () => Promise<void> | void;
+  onMeltSuccess?: () => void;
   melting?: boolean;
 }
 
@@ -45,6 +47,7 @@ export function CertificateDetail({
   onOpenExplorer,
   onShare,
   onMelt,
+  onMeltSuccess,
   melting = false,
 }: CertificateDetailProps) {
   const { explorerUrl } = useNetwork();
@@ -54,6 +57,7 @@ export function CertificateDetail({
   const [showMeltModal, setShowMeltModal] = useState(false);
   const [meltReason, setMeltReason] = useState('');
   const [meltModalError, setMeltModalError] = useState<string | null>(null);
+  const [meltSuccess, setMeltSuccess] = useState(false);
 
   const display = formatCertificateDisplay(certificate);
   const expired = isExpired(certificate);
@@ -188,6 +192,7 @@ export function CertificateDetail({
               className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
               onClick={() => {
                 setMeltModalError(null);
+                setMeltSuccess(false);
                 setShowMeltModal(true);
               }}
               disabled={melting}
@@ -420,81 +425,125 @@ export function CertificateDetail({
       <Modal
         isOpen={showMeltModal}
         onClose={() => {
+          if (melting) return;
+          if (meltSuccess) {
+            onMeltSuccess?.();
+          }
           setShowMeltModal(false);
           setMeltModalError(null);
+          setMeltSuccess(false);
         }}
-        title="Melt Certificate & Reclaim CKB"
+        title={meltSuccess ? 'Certificate Melted' : 'Melt Certificate & Reclaim CKB'}
         size="md"
       >
-        <div className="space-y-4">
-          <div className="p-3 bg-orange-950/40 border border-orange-700/40 rounded-xl flex items-start gap-3">
-            <Flame className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-orange-200 leading-relaxed">
-              This will <strong>permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
-            </p>
-          </div>
-
-          {meltModalError && (
-            <div className="p-3 bg-red-950/60 border border-red-800/60 rounded-xl flex items-start gap-2.5 text-xs text-red-300">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-              <span className="leading-relaxed">{meltModalError}</span>
+        {meltSuccess ? (
+          <div className="space-y-4 py-1">
+            <div className="p-4 bg-signal-green/10 border border-signal-green/30 rounded-xl flex items-start gap-3.5">
+              <CheckCircle2 className="w-5 h-5 text-signal-green flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-bone-white">Certificate Melted Successfully</p>
+                <p className="text-xs text-ash-veil leading-relaxed">
+                  The certificate DOB cell has been permanently destroyed on CKB, and the locked CKB capacity has been returned to your wallet.
+                </p>
+              </div>
             </div>
-          )}
 
-          <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 text-xs text-ash-veil space-y-2">
-            <div className="flex justify-between">
-              <span>Certificate ID</span>
-              <span className="font-mono text-bone-white">{truncateAddress(certificateId, 12, 6)}</span>
+            <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 text-xs text-ash-veil space-y-2">
+              <div className="flex justify-between">
+                <span>Certificate ID</span>
+                <span className="font-mono text-bone-white">{truncateAddress(certificateId, 12, 6)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Status</span>
+                <span className="text-signal-green font-medium">Melted / Capacity Reclaimed</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Type</span>
-              <span className="text-bone-white">Spore DOB Cell</span>
-            </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-ash-veil">
-              Reason for Melting (Optional)
-            </label>
-            <Input
-              placeholder="e.g., No longer needed, recipient requested..."
-              value={meltReason}
-              onChange={(v) => setMeltReason(v)}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-3 border-t border-fog-line/10">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowMeltModal(false);
-                setMeltModalError(null);
-              }}
-              className="flex-1 text-xs"
-              disabled={melting}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1 text-xs bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-lg"
-              loading={melting}
-              onClick={async () => {
-                if (!onMelt) return;
-                try {
-                  setMeltModalError(null);
-                  await onMelt();
+            <div className="pt-2">
+              <Button
+                className="w-full text-xs shadow-glow-green/30"
+                onClick={() => {
                   setShowMeltModal(false);
-                } catch (err: any) {
-                  setMeltModalError(err?.message || 'Failed to melt certificate');
-                }
-              }}
-            >
-              <Flame className="w-3.5 h-3.5" />
-              Melt & Reclaim
-            </Button>
+                  setMeltSuccess(false);
+                  onMeltSuccess?.();
+                }}
+              >
+                Close
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="p-3 bg-orange-950/40 border border-orange-700/40 rounded-xl flex items-start gap-3">
+              <Flame className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-orange-200 leading-relaxed">
+                This will <strong>permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
+              </p>
+            </div>
+
+            {meltModalError && (
+              <div className="p-3 bg-red-950/60 border border-red-800/60 rounded-xl flex items-start gap-2.5 text-xs text-red-300">
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{meltModalError}</span>
+              </div>
+            )}
+
+            <div className="p-3 bg-midnight-plum rounded-xl border border-fog-line/10 text-xs text-ash-veil space-y-2">
+              <div className="flex justify-between">
+                <span>Certificate ID</span>
+                <span className="font-mono text-bone-white">{truncateAddress(certificateId, 12, 6)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Type</span>
+                <span className="text-bone-white">Spore DOB Cell</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-ash-veil">
+                Reason for Melting (Optional)
+              </label>
+              <Input
+                placeholder="e.g., No longer needed, recipient requested..."
+                value={meltReason}
+                onChange={(v) => setMeltReason(v)}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-3 border-t border-fog-line/10">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowMeltModal(false);
+                  setMeltModalError(null);
+                }}
+                className="flex-1 text-xs"
+                disabled={melting}
+              >
+                {meltModalError ? 'Close' : 'Cancel'}
+              </Button>
+              <Button
+                className="flex-1 text-xs bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white shadow-lg"
+                loading={melting}
+                onClick={async () => {
+                  if (!onMelt) return;
+                  try {
+                    setMeltModalError(null);
+                    await onMelt();
+                    setMeltSuccess(true);
+                  } catch (err: any) {
+                    setMeltModalError(err?.message || 'Failed to melt certificate');
+                  }
+                }}
+              >
+                <Flame className="w-3.5 h-3.5" />
+                Melt & Reclaim
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
 }
+

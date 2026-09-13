@@ -24,6 +24,7 @@ interface CertificateWithMeta {
   certificateId: string;
   transactionHash?: string;
   clusterId?: string;
+  sporeId?: string;
 }
 
 function CertificatesContent() {
@@ -37,8 +38,10 @@ function CertificatesContent() {
   const [filterMode, setFilterMode] = useState<'all' | 'received' | 'issued'>('all');
   const [shareResult, setShareResult] = useState<{ message: string; success: boolean } | null>(null);
   const [meltingCertId, setMeltingCertId] = useState<string | null>(null);
-  const [meltError, setMeltError] = useState<string | null>(null);
+  const [justMeltedId, setJustMeltedId] = useState<string | null>(null);
   const [userDids, setUserDids] = useState<string[]>([]);
+
+  const effectiveCertIdParam = certIdParam && certIdParam !== justMeltedId ? certIdParam : null;
 
   // Fetch user's DIDs when address changes
   useEffect(() => {
@@ -80,12 +83,12 @@ function CertificatesContent() {
 
   // Dedicated query to fetch individual certificate when navigating directly via ?id=...
   const { data: fetchedParamCert, isLoading: isLoadingParamCert } = useQuery({
-    queryKey: ['certificate-by-id', certIdParam],
+    queryKey: ['certificate-by-id', effectiveCertIdParam],
     queryFn: async () => {
-      if (!certIdParam) return null;
-      const foundInRaw = rawCertificates.find((c) => c.certificateId === certIdParam);
+      if (!effectiveCertIdParam) return null;
+      const foundInRaw = rawCertificates.find((c) => c.certificateId === effectiveCertIdParam);
       if (foundInRaw) return foundInRaw;
-      const fetched = await getCertificate(certIdParam, client);
+      const fetched = await getCertificate(effectiveCertIdParam, client);
       if (fetched && fetched.certificate) {
         return {
           certificate: fetched.certificate,
@@ -96,7 +99,7 @@ function CertificatesContent() {
       }
       return null;
     },
-    enabled: !!certIdParam,
+    enabled: !!effectiveCertIdParam,
   });
 
   const { receivedCerts, issuedCerts, allUserCerts, certificates } = useMemo(() => {
@@ -201,39 +204,50 @@ function CertificatesContent() {
 
   const handleMelt = async (cert: CertificateWithMeta) => {
     if (!signer) {
-      setMeltError('Wallet not connected');
-      return;
+      throw new Error('Wallet not connected');
     }
     try {
-      setMeltError(null);
       setMeltingCertId(cert.certificateId);
       await meltCertificate(signer, cert.certificateId);
+
+      // Optimistically remove from certificates cache so it disappears immediately when returning to list
+      queryClient.setQueryData(['certificates', address], (old: CertificateWithMeta[] | undefined) => {
+        if (!old) return [];
+        return old.filter(
+          (c) => c.certificateId !== cert.certificateId && c.sporeId !== cert.certificateId
+        );
+      });
+      queryClient.removeQueries({ queryKey: ['certificate-by-id', cert.certificateId] });
+
       await queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      await queryClient.invalidateQueries({ queryKey: ['certificate-by-id'] });
       await refetch();
-      // Go back to list after melting
-      setSelectedCert(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to melt certificate';
-      setMeltError(message);
-      throw error; // Re-throw so modal can handle loading state
+      throw error; // Re-throw so modal can handle error display
     } finally {
       setMeltingCertId(null);
     }
   };
 
+  const handleMeltSuccess = (certId: string) => {
+    setJustMeltedId(certId);
+    setSelectedCert(null);
+    router.push('/certificates');
+  };
+
   // Derive active certificate from URL parameter or selected state
   const activeCert: CertificateWithMeta | null = useMemo(() => {
-    if (certIdParam) {
-      if (selectedCert?.certificateId === certIdParam) return selectedCert;
-      const foundInRaw = rawCertificates.find((c) => c.certificateId === certIdParam);
+    if (effectiveCertIdParam) {
+      if (selectedCert?.certificateId === effectiveCertIdParam) return selectedCert;
+      const foundInRaw = rawCertificates.find((c) => c.certificateId === effectiveCertIdParam);
       if (foundInRaw) return foundInRaw;
       if (fetchedParamCert) return fetchedParamCert;
     }
     return selectedCert;
-  }, [certIdParam, selectedCert, rawCertificates, fetchedParamCert]);
+  }, [effectiveCertIdParam, selectedCert, rawCertificates, fetchedParamCert]);
 
   // If visiting directly with a cert ID, show loading spinner while fetching
-  if (certIdParam && !activeCert && (isLoading || isLoadingParamCert)) {
+  if (effectiveCertIdParam && !activeCert && (isLoading || isLoadingParamCert)) {
     return (
       <div className="flex justify-center py-24">
         <Spinner label="Loading certificate details..." />
@@ -242,7 +256,7 @@ function CertificatesContent() {
   }
 
   // If cert ID was requested in URL but not found after loading
-  if (certIdParam && !activeCert && !isLoading && !isLoadingParamCert) {
+  if (effectiveCertIdParam && !activeCert && !isLoading && !isLoadingParamCert) {
     return (
       <div className="max-w-md mx-auto py-16 text-center space-y-4">
         <Card variant="default" padding="xl" className="space-y-4">
@@ -251,7 +265,7 @@ function CertificatesContent() {
             Could not find a certificate matching ID:
             <br />
             <span className="font-mono text-bone-white break-all text-[11px] bg-shadow-plum/60 p-1.5 rounded inline-block mt-2">
-              {certIdParam}
+              {effectiveCertIdParam}
             </span>
           </p>
           <div className="pt-2">
@@ -268,7 +282,7 @@ function CertificatesContent() {
     );
   }
 
-  if (isLoadingAddress && !certIdParam) {
+  if (isLoadingAddress && !effectiveCertIdParam) {
     return (
       <div className="flex justify-center py-24">
         <Spinner label="Resolving wallet address..." />
@@ -276,7 +290,7 @@ function CertificatesContent() {
     );
   }
 
-  if (!address && !certIdParam) {
+  if (!address && !effectiveCertIdParam) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Card variant="default" padding="xl" className="max-w-md text-center space-y-4">
@@ -333,11 +347,6 @@ function CertificatesContent() {
             {shareResult.message}
           </div>
         )}
-        {meltError && (
-          <div className="px-4 py-2 rounded-xl text-xs font-medium bg-red-950/40 border border-red-800/40 text-red-400">
-            {meltError}
-          </div>
-        )}
         <CertificateDetail
           certificate={activeCert.certificate}
           certificateId={activeCert.certificateId}
@@ -345,6 +354,7 @@ function CertificatesContent() {
           isIssuer={isIssuerOfSelected}
           onShare={() => handleShare(activeCert)}
           onMelt={() => handleMelt(activeCert)}
+          onMeltSuccess={() => handleMeltSuccess(activeCert.certificateId)}
           melting={meltingCertId === activeCert.certificateId}
         />
       </div>
@@ -417,6 +427,7 @@ function CertificatesContent() {
         certificates={certificates}
         loading={isLoading}
         onSelect={(cert) => {
+          setJustMeltedId(null);
           setSelectedCert(cert);
           router.push(`/certificates?id=${encodeURIComponent(cert.certificateId)}`);
         }}
