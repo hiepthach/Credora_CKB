@@ -1,9 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ccc } from '@ckb-ccc/core';
-import { issueCertificate, getCertificate, meltCertificate } from '@/lib/credentials/issuer';
+import { issueCertificate, getCertificate, meltCertificate, clearCertificateCache } from '@/lib/credentials/issuer';
 import { verifyCertificate, isExpired } from '@/lib/credentials/verifier';
 import { encodeCertificateDNA } from '@/lib/credentials/encoder';
 import { decodeCertificateDNA } from '@/lib/credentials/decoder';
+
+// Generate consistent certificate IDs for mock data
+const CERTIFICATE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
+const SPORE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
+
+const MOCK_CERTIFICATE_DNA = {
+  '@context': ['https://www.w3.org/2018/credentials/v1'],
+  id: CERTIFICATE_ID,
+  type: ['VerifiableCredential', 'CourseCertificate'],
+  issuer: { id: 'ckt1qcluster', name: 'CKB Developer Academy' },
+  issuanceDate: '2026-01-01T00:00:00Z',
+  expirationDate: '2027-01-01T00:00:00Z',
+  credentialSubject: {
+    id: 'ckt1qzda0cr08m85hc8j9np9u2xnjvs2tsq8q5h5xcmr',
+    type: 'CourseCertificate',
+    name: 'Alice Developer',
+    courseName: 'Full-Stack CKB App Architecture',
+    completionDate: '2026-01-01',
+    grade: 'Distinction',
+  },
+};
+
+// Mock generateCertificateId to return deterministic ID (matches MOCK_CERTIFICATE_DNA.id)
+// Must use the same path that issuer.ts imports from
+vi.mock('@/lib/credentials/encoder', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/credentials/encoder')>();
+  return {
+    ...actual,
+    generateCertificateId: vi.fn(() => CERTIFICATE_ID),
+  };
+});
 
 vi.mock('@ckb-ccc/spore', () => ({
   createSpore: vi.fn(async () => ({
@@ -11,34 +42,23 @@ vi.mock('@ckb-ccc/spore', () => ({
       completeInputsByCapacity: vi.fn(),
       completeFeeBy: vi.fn(),
     },
-    id: '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff',
+    id: SPORE_ID,
   })),
-  findSpore: vi.fn(async () => ({
-    cell: {
-      cellOutput: {
-        capacity: '0x3b9aca00',
-        lock: { codeHash: '0x99', hashType: 'type', args: '0x1234' },
-      },
-      outputData: new TextEncoder().encode(
-        JSON.stringify({
-          '@context': ['https://www.w3.org/2018/credentials/v1'],
-          id: '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff',
-          type: ['VerifiableCredential', 'CourseCertificate'],
-          issuer: { id: 'ckt1qcluster', name: 'CKB Developer Academy' },
-          issuanceDate: '2026-01-01T00:00:00Z',
-          expirationDate: '2027-01-01T00:00:00Z',
-          credentialSubject: {
-            id: 'ckt1qzda0cr08m85hc8j9np9u2xnjvs2tsq8q5h5xcmr',
-            type: 'CourseCertificate',
-            name: 'Alice Developer',
-            courseName: 'Full-Stack CKB App Architecture',
-            completionDate: '2026-01-01',
-            grade: 'Distinction',
+  findSpore: vi.fn(async (_client: unknown, id: string) => {
+    // Return cell for known IDs, or simulate pending/unindexed
+    if (id === SPORE_ID || id === CERTIFICATE_ID) {
+      return {
+        cell: {
+          cellOutput: {
+            capacity: '0x3b9aca00',
+            lock: { codeHash: '0x99', hashType: 'type', args: '0x1234' },
           },
-        })
-      ),
-    },
-  })),
+          outputData: new TextEncoder().encode(JSON.stringify(MOCK_CERTIFICATE_DNA)),
+        },
+      };
+    }
+    return undefined;
+  }),
   meltSpore: vi.fn(async () => ({
     tx: {
       completeInputsByCapacity: vi.fn(),
@@ -48,6 +68,11 @@ vi.mock('@ckb-ccc/spore', () => ({
 }));
 
 describe('Certificate Lifecycle Integration', () => {
+  beforeEach(() => {
+    clearCertificateCache();
+    vi.clearAllMocks();
+  });
+
   const mockSigner = {
     client: {
       addressToScript: vi.fn(async () => ({ codeHash: '0x99', hashType: 'type', args: '0x1234' })),

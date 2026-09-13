@@ -692,6 +692,13 @@ export async function meltCertificate(
             try {
               const found = await findSpore(liveSigner.client, candidateId);
               if (found?.cell) {
+                // Verify DNA matches the target certificate
+                const certDna = extractCertificateFromCell(found.cell.outputData);
+                if (certDna?.id && certRecord?.certificate?.id) {
+                  if (certDna.id !== certRecord.certificate.id) {
+                    continue;
+                  }
+                }
                 targetSporeId = candidateId;
                 cellLock = found.cell.cellOutput.lock;
                 foundCell = true;
