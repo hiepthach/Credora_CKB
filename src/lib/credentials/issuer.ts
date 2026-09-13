@@ -169,10 +169,10 @@ export function isCertificateJson(text: string): boolean {
  * Robustly extract CertificateDNA from on-chain cell outputData
  * Supports both Spore Molecule SporeData format and plain JSON format.
  */
-export function extractCertificateFromCell(outputData?: string): CertificateDNA | null {
-  if (!outputData || outputData === '0x' || outputData.length < 10) return null;
+export function extractCertificateFromCell(outputData?: string | Uint8Array | unknown): CertificateDNA | null {
+  if (!outputData || (outputData as any) === '0x' || (outputData as any).length < 10) return null;
   try {
-    const rawBytes = ccc.bytesFrom(outputData);
+    const rawBytes = ccc.bytesFrom(outputData as any);
 
     // 1. Try unpacking as SporeData (Molecule format)
     try {
@@ -571,6 +571,25 @@ export async function getAllCertificates(
 }
 
 /**
+ * Helper to verify cell DNA against the expected certificate record.
+ */
+export function verifyCellDNA(cellOutputData: Uint8Array | unknown, certRecord: any): boolean {
+  const expectedId = certRecord?.certificate?.id || certRecord?.sporeId || certRecord?.certificateId;
+  if (expectedId) {
+    const certDna = extractCertificateFromCell(cellOutputData);
+    const matchesDna = certDna?.id && (
+      certDna.id === certRecord?.certificate?.id ||
+      certDna.id === certRecord?.sporeId ||
+      certDna.id === certRecord?.certificateId
+    );
+    if (!matchesDna) {
+      return false; // Skip this cell
+    }
+  }
+  return true;
+}
+
+/**
  * Melt (destroy) a certificate cell to reclaim CKB capacity.
  * Only the certificate holder can melt their own certificate.
  *
@@ -665,17 +684,9 @@ export async function meltCertificate(
       const found = await findSpore(liveSigner.client, candidateId as `0x${string}`);
       if (found?.cell) {
         // CRITICAL: Verify DNA matches the target certificate
-        const certDna = extractCertificateFromCell(found.cell.outputData);
-        if (certRecord?.certificate?.id) {
-          const matchesDna =
-            certDna?.id &&
-            (certDna.id === certRecord.certificate.id ||
-             certDna.id === certRecord.sporeId ||
-             certDna.id === certRecord.certificateId);
-          if (!matchesDna) {
-            // DNA mismatch or missing - this is NOT the target certificate, continue searching
-            continue;
-          }
+        if (!verifyCellDNA(found.cell.outputData, certRecord)) {
+          // DNA mismatch or missing - this is NOT the target certificate, continue searching
+          continue;
         }
         // DNA verified or no DNA to compare - accept this cell
         targetSporeId = candidateId as `0x${string}`;
@@ -698,16 +709,8 @@ export async function meltCertificate(
               const found = await findSpore(liveSigner.client, candidateId);
               if (found?.cell) {
                 // Verify DNA matches the target certificate
-                const certDna = extractCertificateFromCell(found.cell.outputData);
-                if (certRecord?.certificate?.id) {
-                  const matchesDna =
-                    certDna?.id &&
-                    (certDna.id === certRecord.certificate.id ||
-                     certDna.id === certRecord.sporeId ||
-                     certDna.id === certRecord.certificateId);
-                  if (!matchesDna) {
-                    continue;
-                  }
+                if (!verifyCellDNA(found.cell.outputData, certRecord)) {
+                  continue;
                 }
                 targetSporeId = candidateId;
                 cellLock = found.cell.cellOutput.lock;

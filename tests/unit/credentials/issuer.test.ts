@@ -807,5 +807,48 @@ describe('Certificate Service (Issuer)', () => {
       expect(vi.mocked(meltSpore)).not.toHaveBeenCalled();
     });
   });
+
+  describe('verifyCellDNA', () => {
+    it('returns true when certRecord has no expected ID', async () => {
+      const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
+      expect(verifyCellDNA(new Uint8Array(), {})).toBe(true);
+    });
+
+    it('returns true when cell DNA ID matches certificate.id', async () => {
+      const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
+      const data = new TextEncoder().encode(JSON.stringify({
+        '@context': ['https://www.w3.org/2018/credentials/v1'],
+        id: 'cert-123',
+        type: ['VerifiableCredential'],
+      }));
+      expect(verifyCellDNA(data, { certificate: { id: 'cert-123' } })).toBe(true);
+    });
+
+    it('returns true when cell DNA ID matches sporeId or certificateId', async () => {
+      const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
+      const data = new TextEncoder().encode(JSON.stringify({
+        '@context': ['https://www.w3.org/2018/credentials/v1'],
+        id: 'spore-456',
+        type: ['VerifiableCredential'],
+      }));
+      expect(verifyCellDNA(data, { sporeId: 'spore-456' })).toBe(true);
+      expect(verifyCellDNA(data, { certificateId: 'spore-456' })).toBe(true);
+    });
+
+    it('returns false when cell DNA does not match expected ID', async () => {
+      const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
+      const data = new TextEncoder().encode(JSON.stringify({
+        '@context': ['https://www.w3.org/2018/credentials/v1'],
+        id: 'wrong-id',
+        type: ['VerifiableCredential'],
+      }));
+      expect(verifyCellDNA(data, { certificate: { id: 'cert-123' } })).toBe(false);
+    });
+
+    it('returns false when outputData cannot be parsed and expected ID is set', async () => {
+      const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
+      expect(verifyCellDNA('0x1234', { certificate: { id: 'cert-123' } })).toBe(false);
+    });
+  });
 });
 
