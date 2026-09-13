@@ -289,6 +289,8 @@ export async function getCertificate(
                 } catch {
                   continue;
                 }
+              } else {
+                continue; // Skip plain JSON cells - only Spore DOB certificates are supported
               }
 
               const certId = sporeId || certDna.id || certificateId;
@@ -367,6 +369,8 @@ export async function getHolderCertificates(
             if (!certDna) continue;
 
             const sporeId = cell.cellOutput.type?.args ? ccc.hexFrom(cell.cellOutput.type.args) : undefined;
+            // Skip plain JSON cells (no sporeId) - only Spore DOB certificates are supported
+            if (!sporeId) continue;
             const certId = sporeId || certDna.id || cell.outPoint.txHash;
             const certDnaId = certDna.id;
             const txHash = cell.outPoint.txHash;
@@ -534,6 +538,8 @@ export async function getAllCertificates(
                   } catch {
                     continue;
                   }
+                } else {
+                  continue; // Skip plain JSON cells - only Spore DOB certificates are supported
                 }
 
                 const certId = sporeId || certDna.id || txRecord.txHash;
