@@ -817,13 +817,13 @@ describe('Certificate Service (Issuer)', () => {
         tx: {
           outputs: [
             {
-              capacity: 50000000000n, // 500 CKB in shannons
+              capacity: BigInt(50000000000), // 500 CKB in shannons
               lock: { args: '0x', codeHash: '0x', hashType: 'type' },
               type: { args: '0x' + '00'.repeat(32), codeHash: '0x', hashType: 'type' },
             },
           ],
-        },
-        id: '0x' + '00'.repeat(32),
+        } as any,
+        id: ('0x' + '00'.repeat(32)) as any,
       });
     });
 
@@ -831,7 +831,7 @@ describe('Certificate Service (Issuer)', () => {
     it('should return exact capacity matching CellOutput.capacity', async () => {
       const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
 
-      const result = await previewCertificateMint(createMockSigner(), {
+      const result = await previewCertificateMint(createMockSigner() as any, {
         clusterId: '0x' + '00'.repeat(32),
         issuerName: 'Test Issuer',
         subject: {
@@ -853,7 +853,7 @@ describe('Certificate Service (Issuer)', () => {
     it('should reflect DNA size in dnaBytes calculation', async () => {
       const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
 
-      const smallResult = await previewCertificateMint(createMockSigner(), {
+      const smallResult = await previewCertificateMint(createMockSigner() as any, {
         clusterId: '0x' + '00'.repeat(32),
         issuerName: 'Test Issuer',
         subject: {
@@ -865,7 +865,7 @@ describe('Certificate Service (Issuer)', () => {
         },
       });
 
-      const largeResult = await previewCertificateMint(createMockSigner(), {
+      const largeResult = await previewCertificateMint(createMockSigner() as any, {
         clusterId: '0x' + '00'.repeat(32),
         issuerName: 'Test Issuer',
         subject: {
@@ -889,7 +889,7 @@ describe('Certificate Service (Issuer)', () => {
       const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
 
       await expect(
-        previewCertificateMint(createMockSigner(), {
+        previewCertificateMint(createMockSigner() as any, {
           clusterId: '0x' + '00'.repeat(32),
           issuerName: 'Test Issuer',
           subject: {

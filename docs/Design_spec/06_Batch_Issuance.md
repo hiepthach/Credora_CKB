@@ -44,6 +44,36 @@ function previewBatch(
   entries: BatchEntry[],
   clusterId: string
 ): BatchPreview
+
+// Calculate exact CKB capacity for a single batch entry
+async function calculateEntryCapacity(
+  entry: BatchEntry,
+  options?: {
+    clusterId?: string;
+    issuerName?: string;
+    issuerDescription?: string;
+    expirationDate?: string;
+    client?: ccc.Client;
+    visualStyle?: VisualStyleConfig;
+  }
+): Promise<number>
+
+// Calculate total exact CKB capacity for an entire batch
+async function calculateBatchCapacity(
+  entries: BatchEntry[],
+  options?: {
+    clusterId?: string;
+    issuerName?: string;
+    issuerDescription?: string;
+    expirationDate?: string;
+    client?: ccc.Client;
+    visualStyle?: VisualStyleConfig;
+  }
+): Promise<{
+  totalCapacity: number;
+  totalCapacityFormatted: string;
+  entriesWithCapacity: BatchEntry[];
+}>
 ```
 
 ### 3.2 Types
@@ -64,6 +94,7 @@ interface BatchEntry {
   resolvedAddress?: string;        // Resolved CKB address when DID is provided
   isDid?: boolean;                 // Whether recipientAddress is a DID
   resolutionError?: string;        // Error if DID resolution fails
+  exactCapacity?: number;          // Exact on-chain locked CKB capacity for this entry
 }
 
 interface ParseBatchResult {
@@ -112,6 +143,7 @@ interface BatchPreview {
   validEntries: BatchEntry[];
   invalidEntries: BatchEntry[];
   estimatedFee: string;
+  exactTotalCapacity?: number;     // Exact sum of on-chain locked CKB capacity
   warnings: string[];
 }
 ```
@@ -370,16 +402,20 @@ flowchart TD
 |------------|-------------|-----|
 | MVP | 10-50 | 100 |
 
-### 8.2 Estimated Costs
+### 8.2 Required On-Chain Capacity & State Rent Economics
+
+Under CKB's Cell Model (RFC 0017 / RFC 0022), capacity represents an on-chain storage deposit, NOT a consumed fee. All locked CKB capacity is 100% reclaimable by holders upon melting.
 
 ```
 Per Certificate:
-- Capacity: ~150 CKB (Spore DOB)
-- Fee: ~0.001 CKB
-- Total: ~151 CKB per certificate
+- Fixed Spore DOB overhead: 204 CKB (8 capacity + 55 JoyID lock + 65 Spore type + 76 SporeData table)
+- Certificate DNA data bytes: ~650 - 700 CKB
+- Total Locked Capacity: ~850 - 900 CKB per certificate
+- Miner Fee: ~0.001 CKB
 
 For 100 certificates:
-- Total CKB: ~15,100 CKB
+- Total Locked Capacity: ~85,000 - 90,000 CKB (100% refundable upon melting)
+- Total Transaction Fees: ~0.1 CKB
 ```
 
 ---
@@ -555,13 +591,13 @@ describe('Batch Issuance - Performance', () => {
     expect(duration).toBeLessThan(5 * 60 * 1000); // 5 minutes
   });
 
-  it('should estimate fees correctly', async () => {
+  it('should estimate fees and capacity correctly', async () => {
     const preview = previewBatch(generateEntries(100), 'cluster_abc');
 
-    // 100 certs * ~151 CKB = ~15100 CKB
+    // 100 certs * ~850-900 CKB = ~85,000 - 90,000 CKB
     const estimated = parseFloat(preview.estimatedFee);
-    expect(estimated).toBeGreaterThan(15000);
-    expect(estimated).toBeLessThan(20000);
+    expect(estimated).toBeGreaterThan(80000);
+    expect(estimated).toBeLessThan(100000);
   });
 });
 ```

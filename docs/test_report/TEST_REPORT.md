@@ -1,9 +1,9 @@
 # CKB Credential Registry - Test Report
 
-**Project:** CKB Credential Registry
-**Test Date:** 2026-08-23
+**Project:** CKB Credential Registry (Credora)
+**Test Date:** 2026-09-17
 **Test Framework:** Vitest 2.0.5
-**Total Tests:** 182
+**Total Tests:** 310
 **Status:** ✅ ALL PASSING
 
 ---
@@ -12,30 +12,52 @@
 
 | Metric | Value |
 |--------|-------|
-| Total Test Files | 12 |
-| Total Tests | 182 |
-| Passed | 182 |
+| Total Test Files | 34 |
+| Total Tests | 310 |
+| Passed | 310 |
 | Failed | 0 |
-| Test Duration | ~8.2s |
+| Test Duration | ~10.4s |
 
 ---
 
 ## Test Files Overview
 
-| File | Tests | Status |
-|------|-------|--------|
-| `tests/unit/ckb/config.test.ts` | 12 | ✅ Pass |
-| `tests/unit/credentials/encoder.test.ts` | 9 | ✅ Pass |
-| `tests/unit/credentials/decoder.test.ts` | 22 | ✅ Pass |
-| `tests/unit/credentials/batch.test.ts` | 14 | ✅ Pass |
-| `tests/unit/credentials/cluster.test.ts` | 9 | ✅ Pass |
-| `tests/unit/credentials/verifier.test.ts` | 12 | ✅ Pass |
-| `tests/unit/credentials/issuer.test.ts` | 18 | ✅ Pass |
-| `tests/unit/credentials/services.test.ts` | 26 | ✅ Pass |
-| `tests/unit/ui/Button.test.tsx` | 17 | ✅ Pass |
-| `tests/unit/ui/Badge.test.tsx` | 11 | ✅ Pass |
-| `tests/unit/ui/Card.test.tsx` | 14 | ✅ Pass |
-| `tests/unit/ui/Input.test.tsx` | 18 | ✅ Pass |
+| Category | File | Tests | Status |
+|----------|------|-------|--------|
+| **Integration** | `tests/integration/batch-flow.test.ts` | 1 | ✅ Pass |
+| **Integration** | `tests/integration/certificate-lifecycle.test.ts` | 2 | ✅ Pass |
+| **Integration** | `tests/integration/did-integration.test.ts` | 11 | ✅ Pass |
+| **Batch Unit** | `tests/unit/batch/BatchIssuePage.test.tsx` | 8 | ✅ Pass |
+| **Batch Unit** | `tests/unit/batch/BatchPreview.test.tsx` | 8 | ✅ Pass |
+| **Batch Unit** | `tests/unit/batch/BatchUpload.test.tsx` | 5 | ✅ Pass |
+| **Certificate Unit** | `tests/unit/certificate/CertificateDetail.test.tsx` | 11 | ✅ Pass |
+| **Certificate Unit** | `tests/unit/certificate/CertificateForm.test.tsx` | 4 | ✅ Pass |
+| **Certificate Unit** | `tests/unit/certificate/PaperCertificate.test.tsx` | 13 | ✅ Pass |
+| **Certificate Unit** | `tests/unit/certificates/InstitutionSelector.test.tsx` | 3 | ✅ Pass |
+| **CKB Config** | `tests/unit/ckb/config.test.ts` | 12 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/batch.test.ts` | 28 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/cluster.test.ts` | 9 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/decoder.test.ts` | 19 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/encoder.test.ts` | 9 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/issuer.test.ts` | 32 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/services.test.ts` | 26 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/template-types.test.ts` | 2 | ✅ Pass |
+| **Credentials** | `tests/unit/credentials/verifier.test.ts` | 10 | ✅ Pass |
+| **DID** | `tests/unit/did/resolver.test.ts` | 5 | ✅ Pass |
+| **Hooks** | `tests/unit/hooks/useIssuerClusters.test.tsx` | 2 | ✅ Pass |
+| **Lib** | `tests/unit/lib/share.test.ts` | 6 | ✅ Pass |
+| **Template** | `tests/unit/template/TemplateShowcase.test.tsx` | 4 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Alert.test.tsx` | 5 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Badge.test.tsx` | 11 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Button.test.tsx` | 17 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Card.test.tsx` | 14 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/ClusterComponentsLabeling.test.tsx` | 2 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/EmptyState.test.tsx` | 2 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/HeaderLanding.test.tsx` | 1 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Input.test.tsx` | 18 | ✅ Pass |
+| **UI Components** | `tests/unit/ui/Spinner.test.tsx` | 3 | ✅ Pass |
+| **Utils** | `tests/unit/utils/errors.test.ts` | 6 | ✅ Pass |
+| **Verification** | `tests/unit/verification/VerifyResult.test.tsx` | 1 | ✅ Pass |
 
 ---
 
@@ -453,53 +475,81 @@ npm run test:coverage
 
 ```
 tests/
-├── setup.ts                    # Global test setup & mocks
+├── setup.ts                                # Global test setup & mocks
+├── integration/
+│   ├── batch-flow.test.ts                  # Batch issuance flow end-to-end (1 test)
+│   ├── certificate-lifecycle.test.ts       # Mint, verify, melt lifecycle (2 tests)
+│   └── did-integration.test.ts             # did:ckb resolution & backward compat (11 tests)
 └── unit/
+    ├── batch/
+    │   ├── BatchIssuePage.test.tsx         # Batch issuance page orchestration (8 tests)
+    │   ├── BatchPreview.test.tsx           # Capacity preview & style recalculation (8 tests)
+    │   └── BatchUpload.test.tsx            # File dropzone & CSV/JSON parsing (5 tests)
+    ├── certificate/
+    │   ├── CertificateDetail.test.tsx      # Certificate detail & status badges (11 tests)
+    │   ├── CertificateForm.test.tsx        # Real-time CKB preview & form validation (4 tests)
+    │   └── PaperCertificate.test.tsx       # Printable paper diploma & QR (13 tests)
+    ├── certificates/
+    │   └── InstitutionSelector.test.tsx    # Provider cluster selector (3 tests)
     ├── ckb/
-    │   └── config.test.ts    # Network config tests (13 tests)
-    └── credentials/
-        ├── encoder.test.ts    # W3C VC encoding tests (9 tests)
-        ├── decoder.test.ts   # W3C VC decoding tests (22 tests)
-        ├── batch.test.ts     # Batch issuance tests (14 tests)
-        ├── cluster.test.ts   # Cluster validation tests (9 tests)
-        ├── verifier.test.ts  # Verification logic tests (11 tests)
-        ├── issuer.test.ts    # Certificate issuance tests (18 tests)
-        ├── services.test.ts  # Template service tests (26 tests)
-    └── ui/
-        ├── Button.test.tsx   # Button component tests (17 tests)
-        ├── Badge.test.tsx    # Badge component tests (11 tests)
-        ├── Card.test.tsx     # Card component tests (14 tests)
-        └── Input.test.tsx    # Input component tests (18 tests)
+    │   └── config.test.ts                  # Network config & explorer URLs (12 tests)
+    ├── credentials/
+    │   ├── batch.test.ts                   # CSV/JSON, validation & exact capacity (28 tests)
+    │   ├── cluster.test.ts                 # Cluster validation tests (9 tests)
+    │   ├── decoder.test.ts                 # W3C VC decoding tests (19 tests)
+    │   ├── encoder.test.ts                 # W3C VC encoding tests (9 tests)
+    │   ├── issuer.test.ts                  # Mint, preview, melt & capacity (32 tests)
+    │   ├── services.test.ts                # Template service tests (26 tests)
+    │   ├── template-types.test.ts          # Template interface typings (2 tests)
+    │   └── verifier.test.ts                # Verification logic tests (10 tests)
+    ├── did/
+    │   └── resolver.test.ts                # DID resolver utilities (5 tests)
+    ├── hooks/
+    │   └── useIssuerClusters.test.tsx      # Cluster indexing hook (2 tests)
+    ├── lib/
+    │   └── share.test.ts                   # Social & clipboard share helper (6 tests)
+    ├── template/
+    │   └── TemplateShowcase.test.tsx       # Template gallery & preview (4 tests)
+    ├── ui/                                 # Base UI atomic components (68 tests)
+    ├── utils/
+    │   └── errors.test.ts                  # CKB RPC error parser (6 tests)
+    └── verification/
+        └── VerifyResult.test.tsx           # Verification result card (1 test)
 ```
 
 ---
 
 ## Design Spec Reference
 
-Tests implemented according to `doc/Design_spec/`:
+Tests implemented according to `docs/Design_spec/`:
 
 | Design Spec Section | Test Coverage |
 |--------------------|---------------|
-| 02_Encoder_Decoder.md | ✅ Unit Tests - Encoder/Decoder |
-| 01_Cluster_Service.md | ✅ Unit Tests - Cluster |
-| 03_Certificate_Service.md | ✅ Unit Tests - Issuer (18 tests) |
-| 04_Verification_Service.md | ✅ Unit Tests - Verification |
-| 05_Template_Service.md | ✅ Unit Tests - Services (26 tests) |
-| 06_Batch_Issuance.md | ✅ Unit Tests - Batch |
-| 07_CKB_Client.md | ✅ Unit Tests - Config |
-| 08_UI_Components.md | ✅ Unit Tests - UI Components |
+| 01_Cluster_Service.md | ✅ Unit Tests - Cluster (`cluster.test.ts`) |
+| 02_Encoder_Decoder.md | ✅ Unit Tests - Encoder/Decoder (`encoder.test.ts`, `decoder.test.ts`) |
+| 03_Certificate_Service.md | ✅ Unit Tests - Issuer, Mint Preview & Melt (`issuer.test.ts`, 32 tests) |
+| 04_Verification_Service.md | ✅ Unit Tests - Verification (`verifier.test.ts`, `VerifyResult.test.tsx`) |
+| 05_Template_Service.md | ✅ Unit Tests - Template Service & Types (`services.test.ts`, `template-types.test.ts`) |
+| 06_Batch_Issuance.md | ✅ Unit Tests - Batch Validation & Capacity (`batch.test.ts`, `BatchPreview.test.tsx`, `BatchIssuePage.test.tsx`) |
+| 07_CKB_Client.md | ✅ Unit Tests - Config & RPC (`config.test.ts`, `errors.test.ts`) |
+| 08_UI_Components.md | ✅ Unit Tests - UI Components (Alert, Badge, Button, Card, Input, EmptyState, Spinner, etc.) |
+| 09_Vellum_Integration_Design.md | ✅ Integration Tests - DID resolution & compatibility (`did-integration.test.ts`) |
 
 ---
 
 ## Notes
 
 - All tests use Vitest with jsdom environment
-- Tests are isolated and do not depend on external services
-- Mock data is used for CKB SDK dependencies
+- Tests are isolated and do not depend on external live networks
+- Mock data is used for CKB SDK dependencies with accurate Spore DOB Molecule data packing
 - Tests follow the arrange-act-assert pattern with descriptive comments
 - UI components tested with @testing-library/react
-- Melt certificate tests: `issuer.test.ts` covers permanent certificate destruction with CKB reclaim
+- Exact CKB capacity calculations covered:
+  - `previewCertificateMint()` skeleton transaction testing
+  - `calculateEntryCapacity()` and `calculateBatchCapacity()` testing
+  - Batch preview table dynamic recalculation upon style change
+- Melt certificate tests: `issuer.test.ts` covers permanent certificate destruction with 100% CKB capacity reclaim
 
 ---
 
-**Report Generated:** 2026-08-23
+**Report Generated:** 2026-09-17

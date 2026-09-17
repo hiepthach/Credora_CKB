@@ -56,6 +56,16 @@ async function meltCertificate(
   signer: unknown,
   certificateId: string
 ): Promise<{ transactionHash: string }>
+
+// Preview exact CKB capacity required to mint a certificate
+async function previewCertificateMint(
+  signer: unknown,
+  params: IssueCertificateParams
+): Promise<{
+  exactCapacity: number;
+  dnaBytes: number;
+  sporeId: string;
+}>
 ```
 
 ### 3.2 Types
@@ -73,6 +83,12 @@ interface IssueCertificateParams {
 interface IssueCertificateResult {
   certificateId: string;
   transactionHash: string;
+}
+
+interface PreviewCertificateResult {
+  exactCapacity: number;
+  dnaBytes: number;
+  sporeId: string;
 }
 
 interface GetCertificateResult {
@@ -258,6 +274,47 @@ Capacity: Reclaimed to holder's wallet
 - Requires live signer (mock signer not accepted)
 - Ownership verified by comparing cell lock script with holder's wallet lock script
 - Only the certificate holder can destroy their own certificates
+
+### 4.6 previewCertificateMint
+
+**Purpose**: Dry-run minting transaction creation to determine exact CKB capacity required on-chain before user signs.
+
+**Parameters**:
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `signer` | `ccc.Signer` | Yes | Provider's wallet signer |
+| `params` | `IssueCertificateParams` | Yes | Certificate issuance details |
+
+**Returns**: `Promise<{ exactCapacity: number; dnaBytes: number; sporeId: string }>`
+
+**Process**:
+1. Resolve recipient address/DID to lock script.
+2. Serialize W3C VC certificate DNA to JSON string and measure byte length.
+3. Call `spore.createSpore()` with `toLock` set to recipient's lock script to construct the unspent cell output skeleton.
+4. Read `outputCell.capacity` directly from the constructed transaction output (converted from shannons to CKB).
+5. Return exact required capacity without executing or signing the transaction.
+
+### 4.7 CKB Capacity Calculation Mechanics (RFC 0017 / RFC 0022)
+
+Every cell on Nervos CKB requires sufficient capacity to store its fields ($1\text{ byte} = 1\text{ CKB} = 10^8\text{ shannons}$):
+
+$$\text{Capacity (Bytes)} = 8\text{ (capacity field)} + \text{occupiedSize(lock)} + \text{occupiedSize(type)} + \text{occupiedSize(data)}$$
+
+For a Spore DOB Certificate Cell:
+- **Capacity field**: $8\text{ bytes}$
+- **Lock script**: Typically $55\text{ bytes}$ (JoyID Omnilock: 32 code_hash + 1 hash_type + 22 args) or $53\text{ bytes}$ (secp256k1: 32 + 1 + 20)
+- **Type script (Spore)**: $65\text{ bytes}$ (32 code_hash + 1 hash_type + 32 spore_id args)
+- **Data (Molecule SporeData Table)**:
+  - Table header overhead: $16\text{ bytes}$ (4 table length + 3 * 4 field offsets)
+  - Content type string: $16\text{ bytes}$ (`application/json`)
+  - Cluster ID field: $36\text{ bytes}$ (4 offset/length + 32 cluster hash)
+  - Content data: $4\text{ bytes}$ vector length + $N\text{ bytes}$ of encoded DNA JSON
+  - Fixed SporeData overhead with cluster: $76\text{ bytes}$
+
+$$\text{Total Capacity} = 8 + 55 + 65 + (76 + N_{\text{DNA}}) = \mathbf{204 + N_{\text{DNA}}\text{ CKB}}$$
+
+For a typical certificate DNA payload of $682\text{ bytes}$:
+$$\text{Total Capacity} = 204 + 682 = \mathbf{886\text{ CKB}}$$
 
 ---
 

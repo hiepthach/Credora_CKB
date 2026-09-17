@@ -328,12 +328,27 @@ interface CertificateDetailProps {
 ```typescript
 interface CertificateFormProps {
   clusterId: string;
-  template?: Template;
+  clusterName: string;
+  defaultRecipientAddress?: string;
+  defaultLayout?: CertificateLayout;
+  defaultTheme?: CertificateTheme;
+  defaultCustomColor?: string;
+  defaultCustomTitle?: string;
   onSubmit: (data: CertificateData) => void;
+  onChange?: (data: CertificateData) => void;
   onCancel?: () => void;
   loading?: boolean;
 }
 ```
+
+**Real-time CKB Capacity Preview**:
+- Debounced (500ms) background call to `previewCertificateMint()` whenever form fields change.
+- Calculates exact on-chain required CKB capacity according to CKB RFC 0017 / RFC 0022 consensus rules.
+- Banner displays:
+  - Exact locked CKB capacity (e.g., `886 CKB will be locked on-chain`)
+  - Informational notice that locked CKB acts as state rent and is 100% reclaimable upon melting
+  - Encoded DNA payload size in bytes
+  - Dynamic balance check alert if provider's wallet balance is insufficient.
 
 ---
 
@@ -450,20 +465,23 @@ interface BatchUploadProps {
 
 ### 8.2 BatchPreview
 
-**Purpose**: Preview batch before issuing.
+**Purpose**: Preview batch entries, visual style, and exact required CKB capacity before issuing.
 
 **Layout**:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Preview (3 certificates)                              │
-│  ┌─────────────────────────────────────────────────┐  │
-│  │ # │ Address      │ Name   │ Course      │ Grade │  │
-│  │ 1 │ ckt1q...    │ John   │ CKB 101     │ A     │  │
-│  │ 2 │ ckt1q...    │ Jane   │ CKB 101     │ B+    │  │
-│  │ 3 │ ckt1q...    │ Bob    │ CKB 101     │ A     │  │
-│  └─────────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ # │ Address      │ Name   │ Course   │ Capacity   │  │
+│  │ 1 │ ckt1q...    │ John   │ CKB 101  │ 886 CKB    │  │
+│  │ 2 │ did:ckb:... │ Alice  │ Rust 101 │ 890 CKB    │  │
+│  │ 3 │ ckt1q...    │ Bob    │ CKB 101  │ 886 CKB    │  │
+│  └───────────────────────────────────────────────────┘  │
 │                                                         │
-│  Estimated Cost: ~453 CKB                              │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ Total Locked Capacity: ~2,662 CKB [Exact on-chain]│  │
+│  │ 100% refundable when certificates are melted.     │  │
+│  └───────────────────────────────────────────────────┘  │
 │                                                         │
 │  [Cancel]                           [Issue 3]       │
 └─────────────────────────────────────────────────────────┘
@@ -474,11 +492,22 @@ interface BatchUploadProps {
 interface BatchPreviewProps {
   entries: BatchEntry[];
   estimatedCost: string;
-  onConfirm: () => void;
+  exactTotalCapacity?: number;
+  clusterId?: string;
+  issuerName?: string;
+  issuerDescription?: string;
+  client?: any;
+  onConfirm: (defaultStyle: VisualStyleConfig) => void;
   onCancel: () => void;
   loading?: boolean;
+  progress?: BatchProgress | null;
 }
 ```
+
+**Capacity & Style Calculation**:
+- Shows per-row exact locked CKB capacity calculated from recipient lock script and encoded DNA payload.
+- Computes `exactTotalCapacity` across all valid entries.
+- Automatically recalculates all per-row and total capacities when the issuer toggles between visual certificate styles (classic, modern, compact, etc.) since DNA template options affect payload size.
 
 ---
 

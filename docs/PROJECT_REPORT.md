@@ -82,6 +82,7 @@ Course providers can issue credentials individually to either a standard CKB add
 ![Single Certificate Issuance](./screencast/issue.png)
 
 * **Instant On-Chain DID Resolution:** Typing a `did:ckb:` identifier automatically queries the CKB indexer, resolves the active lock script, and displays a green verification badge.
+* **Real-Time CKB Capacity Preview:** Debounced simulation predicts the exact on-chain locked capacity (~850–900 CKB depending on recipient lock script and DNA size) compliant with CKB RFC 0017/0022 consensus rules, informing the issuer that locked CKB acts as state rent and is 100% refundable upon melting.
 * **Custom Layouts & Themes:** Choice of layouts (`classic`, `modern`, `compact`, `badge`, `detailed`) and color palettes.
 * **W3C VC Compliance:** Encodes structured metadata including course name, completion date, expiration date, skills, score, and grade.
 
@@ -94,7 +95,7 @@ Designed for universities, academies, and bootcamps graduating dozens or hundred
 
 * **File Parsing & Pre-validation:** Drag-and-drop CSV or JSON files with instantaneous error detection (invalid addresses, missing fields, format errors).
 * **Mixed Recipient Rosters:** Supports rosters containing both raw CKB addresses and `did:ckb` identifiers in the same batch.
-* **Capacity Estimation:** Automatically calculates required CKB capacity (~151 CKB per certificate) before transaction broadcast.
+* **Exact Capacity & State Rent Economics:** Calculates consensus-exact CKB capacity per certificate (typically ~850–900 CKB based on recipient lock script and DNA payload) and aggregated batch total. Highlights that locked CKB is state rent deposit, 100% reclaimable upon melting.
 * **Sample Testing Datasets:** Downloadable template files provided directly in-app and at `/samples/sample_recipients.csv`.
 
 ---
@@ -157,8 +158,8 @@ The Credora codebase maintains comprehensive test coverage across unit, integrat
 
 ```
 Test Files  34 passed (34)
-Tests       303 passed (303)
-Duration    13.96s
+Tests       310 passed (310)
+Duration    10.39s
 Typecheck   Clean (0 errors)
 ```
 

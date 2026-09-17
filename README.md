@@ -95,6 +95,11 @@ src/
   - Holder can permanently destroy certificates
   - Reclaims locked CKB capacity
   - Melted certificates are no longer verifiable on-chain
+- [x] Exact CKB Capacity Calculation
+  - Real-time CKB locked capacity preview for single certificate minting (debounced)
+  - Per-row and total capacity estimation for batch issuance
+  - Consensus-accurate calculation compliant with CKB RFC 0017 / RFC 0022 (8 bytes capacity + lock + type + SporeData table)
+  - Automatic recalculation when switching visual certificate styles
 
 ### Identity & DID Integration
 - [x] DID Recipient Support
@@ -117,7 +122,7 @@ src/
 - [x] Error Handling (Error boundary, Alert component, CKB RPC error formatter)
 - [x] Loading States (Spinner component, route loading fallbacks)
 - [x] Empty States (EmptyState component across all views)
-- [x] Unit Tests (289+ tests passing)
+- [x] Unit Tests (310+ tests passing)
 - [x] Integration Tests (Lifecycle, batch issuance flow, DID resolution)
 - [x] Sample Datasets (`public/samples/sample_recipients.csv` & `sample_recipients.json`)
 
@@ -160,6 +165,17 @@ Credora natively supports issuing course certificates directly to `did:ckb` iden
 * **Lock Rotation Solved:** Claim Cells delegate spending authorization to the recipient's DID Cell. When the recipient updates their wallet on Vellum, their Claim Cell automatically tracks the new key.
 * **Full Specification:** See [Vellum Integration Design Concept](docs/Design_spec/09_Vellum_Integration_Design.md).
 
+## CKB Cell Capacity & State Rent Economics
+
+In the Nervos CKB Cell Model (RFC 0017 & RFC 0022), on-chain storage requires locking CKB tokens as state rent ($1\text{ byte} = 1\text{ CKB} = 10^8\text{ shannons}$):
+
+$$\text{Cell Capacity} = 8\text{ (capacity field)} + \text{Lock Script bytes} + \text{Type Script bytes} + \text{Data bytes}$$
+
+- **Spore DOB Overhead:** $8\text{ (capacity)} + 55\text{ (JoyID omnilock)} + 65\text{ (Spore type)} + 76\text{ (SporeData table with clusterId)} = \mathbf{204\text{ CKB}}$.
+- **Certificate DNA Payload:** Structured W3C Verifiable Credential JSON typically takes $\sim 650\text{--}700\text{ bytes}$.
+- **Total Required Capacity:** Typically $\mathbf{\sim 850\text{--}900\text{ CKB}}$ per certificate (e.g. JoyID mint tx is $\sim 886\text{ CKB}$).
+- **100% Reclaimable:** Unlike EVM gas fees, locked CKB is an asset deposit, not a fee. When a holder melts an obsolete or expired certificate via `meltCertificate`, 100% of the locked CKB capacity is returned directly to their wallet.
+
 ## Wallet Support
 
 | Wallet | Status | Notes |
@@ -193,7 +209,7 @@ npm run test:coverage # Run tests with coverage
 
 ## Testing
 
-Run unit & integration tests (289 tests passing across 34 test files):
+Run unit & integration tests (310 tests passing across 34 test files):
 
 ```bash
 npm test
