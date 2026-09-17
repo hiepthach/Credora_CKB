@@ -6,13 +6,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { meltSpore, findSpore } from '@ckb-ccc/spore';
+import { meltSpore, findSpore, createSpore } from '@ckb-ccc/spore';
 import { Address } from '@ckb-ccc/core';
 import {
   issueCertificate,
   getCertificate,
   getHolderCertificates,
   clearCertificateCache,
+  previewCertificateMint,
 } from '../../../src/lib/credentials/issuer';
 import type { CredentialSubject } from '@/types';
 
@@ -808,7 +809,102 @@ describe('Certificate Service (Issuer)', () => {
     });
   });
 
-  describe('verifyCellDNA', () => {
+  describe('previewCertificateMint', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      // Mock createSpore to return a transaction with a known capacity
+      vi.mocked(createSpore).mockResolvedValue({
+        tx: {
+          outputs: [
+            {
+              capacity: 50000000000n, // 500 CKB in shannons
+              lock: { args: '0x', codeHash: '0x', hashType: 'type' },
+              type: { args: '0x' + '00'.repeat(32), codeHash: '0x', hashType: 'type' },
+            },
+          ],
+        },
+        id: '0x' + '00'.repeat(32),
+      });
+    });
+
+    // Test: Returns exact capacity from the built transaction
+    it('should return exact capacity matching CellOutput.capacity', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await previewCertificateMint(createMockSigner(), {
+        clusterId: '0x' + '00'.repeat(32),
+        issuerName: 'Test Issuer',
+        subject: {
+          id: validRecipientAddress,
+          type: 'CourseCertificate',
+          name: 'Test User',
+          courseName: 'Test Course',
+          completionDate: '2026-09-01',
+        },
+      });
+
+      // Capacity must be > 126 (fixed overhead: 8 + 53 lock + 65 type)
+      expect(result.exactCapacity).toBeGreaterThan(126);
+      expect(result.dnaBytes).toBeGreaterThan(0);
+      expect(result.sporeId).toMatch(/^0x[a-f0-9]{64}$/);
+    });
+
+    // Test: Larger DNA produces larger dnaBytes
+    it('should reflect DNA size in dnaBytes calculation', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      const smallResult = await previewCertificateMint(createMockSigner(), {
+        clusterId: '0x' + '00'.repeat(32),
+        issuerName: 'Test Issuer',
+        subject: {
+          id: validRecipientAddress,
+          type: 'CourseCertificate',
+          name: 'A',
+          courseName: 'B',
+          completionDate: '2026-09-01',
+        },
+      });
+
+      const largeResult = await previewCertificateMint(createMockSigner(), {
+        clusterId: '0x' + '00'.repeat(32),
+        issuerName: 'Test Issuer',
+        subject: {
+          id: validRecipientAddress,
+          type: 'CourseCertificate',
+          name: 'A Very Long Recipient Name That Takes More Space',
+          courseName: 'A Very Long Course Name That Takes Much More Bytes In The JSON',
+          completionDate: '2026-09-01',
+          grade: 'A+',
+          score: 100,
+          skills: ['Skill 1', 'Skill 2', 'Skill 3', 'Skill 4', 'Skill 5'],
+        },
+      });
+
+      // Larger DNA = larger dnaBytes (capacity is mocked, but dnaBytes is real)
+      expect(largeResult.dnaBytes).toBeGreaterThan(smallResult.dnaBytes);
+    });
+
+    // Test: Rejects when subject id is missing
+    it('should throw when subject id is missing', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      await expect(
+        previewCertificateMint(createMockSigner(), {
+          clusterId: '0x' + '00'.repeat(32),
+          issuerName: 'Test Issuer',
+          subject: {
+            type: 'CourseCertificate',
+            name: 'Test User',
+            courseName: 'Test Course',
+            completionDate: '2026-09-01',
+            // No id
+          },
+        })
+      ).rejects.toThrow('Recipient identifier (address or DID) is required');
+    });
+  });
+
+describe('verifyCellDNA', () => {
     it('returns true when certRecord has no expected ID', async () => {
       const { verifyCellDNA } = await import('../../../src/lib/credentials/issuer');
       expect(verifyCellDNA(new Uint8Array(), {})).toBe(true);

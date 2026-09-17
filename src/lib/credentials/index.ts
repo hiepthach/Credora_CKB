@@ -13,6 +13,7 @@ export {
 } from './cluster';
 export {
   issueCertificate,
+  previewCertificateMint,
   getCertificate,
   getHolderCertificates,
   getClusterCertificates,
@@ -21,7 +22,14 @@ export {
   clearCertificateCache,
 } from './issuer';
 export { verifyCertificate, getVerificationHistory } from './verifier';
-export { parseBatchFile, validateBatchEntries, previewBatch, issueBatchCertificates } from './batch';
+export {
+  parseBatchFile,
+  validateBatchEntries,
+  previewBatch,
+  calculateEntryCapacity,
+  calculateBatchCapacity,
+  issueBatchCertificates,
+} from './batch';
 export {
   createTemplate,
   getTemplate,

@@ -13,6 +13,8 @@ import {
   validateBatchEntries,
   previewBatch,
   issueBatchCertificates,
+  calculateEntryCapacity,
+  calculateBatchCapacity,
 } from '../../../src/lib/credentials/batch';
 import { issueCertificate } from '../../../src/lib/credentials/issuer';
 import type { BatchEntry } from '../../../src/types';
@@ -279,12 +281,12 @@ describe('Batch Issuance', () => {
 
     // Test: Calculate fee estimate correctly
     // Input: 2 valid entries
-    // Expected: Fee = 2 * 151 CKB = 302 CKB
+    // Expected: Fee = 2 * 500 CKB = 1000 CKB
     it('should calculate correct fee estimate', () => {
       const preview = previewBatch(twoValidEntries, 'cluster-123');
 
-      // 2 entries * 151 CKB per certificate = 302 CKB
-      expect(preview.estimatedFee).toBe('302 CKB');
+      // 2 entries * 500 CKB per certificate = 1000 CKB
+      expect(preview.estimatedFee).toBe('1000 CKB');
     });
 
     // Test: Separate valid and invalid entries
@@ -634,6 +636,132 @@ ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq,Bob,Rust 101,2026-
       expect(result.errors[0].row).toBe(2);
       expect(result.errors[0].message).toContain('Row 2 [Bob Failed');
       expect(result.errors[0].message).toContain('Insufficient capacity in wallet');
+    });
+  });
+
+  describe('calculateEntryCapacity and calculateBatchCapacity', () => {
+    const mockClusterId = '0x1111111111111111111111111111111111111111111111111111111111111111';
+
+    it('calculates deterministic exact CKB capacity for a valid entry (>800 CKB)', async () => {
+      const entry: BatchEntry = {
+        row: 1,
+        recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+        recipientName: 'Hiep Thach',
+        courseName: 'CKB-VM Smart Contract Engineering with Rust',
+        completionDate: '2026-09-17',
+        valid: true,
+        errors: [],
+      };
+
+      const capacity = await calculateEntryCapacity(entry, {
+        clusterId: mockClusterId,
+        issuerName: 'Accredited Institution',
+      });
+
+      // JoyID / Omnilock (55B lock) + 65B type script + SporeData table overhead + DNA JSON
+      expect(capacity).toBeGreaterThanOrEqual(850);
+      expect(capacity).toBeLessThanOrEqual(950);
+    });
+
+    it('calculates total capacity summing valid entries and skipping invalid entries', async () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientName: 'Alice Developer',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          valid: true,
+          errors: [],
+        },
+        {
+          row: 2,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          recipientName: 'Bob Builder',
+          courseName: 'CKB Masterclass',
+          completionDate: '2026-03-02',
+          valid: true,
+          errors: [],
+        },
+        {
+          row: 3,
+          recipientAddress: 'invalid_address',
+          recipientName: 'Charlie Broken',
+          courseName: '',
+          completionDate: '2026-03-03',
+          valid: false,
+          errors: ['Invalid address', 'Course name required'],
+        },
+      ];
+
+      const res = await calculateBatchCapacity(entries, {
+        clusterId: mockClusterId,
+        issuerName: 'Accredited Institution',
+      });
+
+      expect(res.entriesWithCapacity).toHaveLength(3);
+      expect(res.entriesWithCapacity[0].exactCapacity).toBeGreaterThan(0);
+      expect(res.entriesWithCapacity[1].exactCapacity).toBeGreaterThan(0);
+      expect(res.entriesWithCapacity[2].exactCapacity).toBeUndefined();
+
+      expect(res.totalCapacity).toBe(
+        res.entriesWithCapacity[0].exactCapacity! + res.entriesWithCapacity[1].exactCapacity!
+      );
+      expect(res.formattedTotalCapacity).toBe(`${res.totalCapacity.toLocaleString()} CKB`);
+    });
+
+    it('increases capacity when customTitle or additional metadata fields are included', async () => {
+      const baseEntry: BatchEntry = {
+        row: 1,
+        recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+        recipientName: 'Alice',
+        courseName: 'Rust 101',
+        completionDate: '2026-03-01',
+        valid: true,
+        errors: [],
+      };
+
+      const baseCap = await calculateEntryCapacity(baseEntry, {
+        clusterId: mockClusterId,
+      });
+
+      const entryWithLongTitle: BatchEntry = {
+        ...baseEntry,
+        customTitle: 'EXCEPTIONAL ACADEMIC DISTINCTION AND LIFELONG MERIT FELLOWSHIP',
+      };
+
+      const higherCap = await calculateEntryCapacity(entryWithLongTitle, {
+        clusterId: mockClusterId,
+      });
+
+      expect(higherCap).toBeGreaterThan(baseCap);
+    });
+
+    it('previewBatch uses exactTotalCapacity and exactCapacity when already populated', () => {
+      const entries: BatchEntry[] = [
+        {
+          row: 1,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          courseName: 'Rust 101',
+          completionDate: '2026-03-01',
+          valid: true,
+          exactCapacity: 886,
+          errors: [],
+        },
+        {
+          row: 2,
+          recipientAddress: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+          courseName: 'CKB 101',
+          completionDate: '2026-03-02',
+          valid: true,
+          exactCapacity: 914,
+          errors: [],
+        },
+      ];
+
+      const preview = previewBatch(entries, mockClusterId);
+      expect(preview.exactTotalCapacity).toBe(1800);
+      expect(preview.estimatedFee).toBe('1,800 CKB');
     });
   });
 });

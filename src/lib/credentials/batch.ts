@@ -6,11 +6,28 @@
  */
 
 import Papa from 'papaparse';
-import type { BatchEntry, BatchValidationResult, BatchPreview, BatchIssueParams, BatchIssueResult, BatchCertificateResult, BatchError, CertificateLayout, CertificateTheme } from '@/types';
+import { ccc } from '@ckb-ccc/core';
+import { packRawSporeData } from '@ckb-ccc/spore/advanced';
+import type {
+  BatchEntry,
+  BatchValidationResult,
+  BatchPreview,
+  BatchIssueParams,
+  BatchIssueResult,
+  BatchCertificateResult,
+  BatchError,
+  CertificateLayout,
+  CertificateTheme,
+  VisualStyleConfig,
+} from '@/types';
 import { issueCertificate } from './issuer';
-import { isDidInput } from '@/lib/did';
+import { encodeCertificateDNA, serializeDNA } from './encoder';
+import { isDidInput, resolveRecipientInput } from '@/lib/did';
 
-const CKB_PER_CERTIFICATE = 151;
+// Estimated CKB per certificate: 500 is a conservative estimate based on actual
+// Spore DOB cell capacity requirements (126 bytes fixed overhead + DNA data bytes).
+// The exact capacity depends on certificate data size (typically 400-900 CKB).
+const CKB_PER_CERTIFICATE = 500;
 const LARGE_BATCH_THRESHOLD = 100;
 const VALID_LAYOUTS: readonly CertificateLayout[] = ['classic', 'modern', 'compact', 'detailed', 'badge'];
 const VALID_THEMES: readonly CertificateTheme[] = ['blue', 'purple', 'green', 'gold', 'red', 'custom'];
@@ -181,6 +198,152 @@ export function validateEntry(entry: BatchEntry): BatchEntry {
 }
 
 /**
+ * Calculate the exact CKB capacity required to lock on-chain for a single certificate entry.
+ */
+export async function calculateEntryCapacity(
+  entry: BatchEntry,
+  options: {
+    clusterId: string;
+    issuerName?: string;
+    issuerDescription?: string;
+    defaultStyle?: VisualStyleConfig;
+    expirationDate?: string;
+    client?: ccc.Client;
+  }
+): Promise<number> {
+  const { clusterId, issuerName = 'Accredited Institution', issuerDescription, defaultStyle, expirationDate, client } = options;
+
+  // Resolve recipient lock script occupied size: 32B codeHash + 1B hashType + len(args)
+  let lockOccupiedSize = 55; // Default fallback: JoyID / Omnilock (32B code_hash + 1B hash_type + 22B args = 55 bytes)
+  try {
+    if (client) {
+      const resolved = await resolveRecipientInput(client, entry.recipientAddress);
+      if (resolved.targetLock?.args) {
+        const argsBytes = (resolved.targetLock.args.length - 2) / 2;
+        lockOccupiedSize = 32 + 1 + argsBytes;
+      }
+    } else {
+      const prefix = entry.recipientAddress.startsWith('ckb') ? 'ckb' : 'ckt';
+      const addr = await ccc.Address.fromString(entry.recipientAddress, { addressPrefix: prefix } as any);
+      if (addr.script?.args) {
+        const argsBytes = (addr.script.args.length - 2) / 2;
+        lockOccupiedSize = 32 + 1 + argsBytes;
+      }
+    }
+  } catch {
+    lockOccupiedSize = 55;
+  }
+
+  const effectiveLayout = entry.layout || defaultStyle?.layout || 'classic';
+  const effectiveTheme = entry.theme || defaultStyle?.theme || 'blue';
+  const effectiveCustomColor = entry.customColor ?? defaultStyle?.customColor ?? '#1E40AF';
+  const effectiveCustomTitle = entry.customTitle ?? defaultStyle?.customTitle ?? '';
+
+  // Encode certificate DNA matching issueCertificate
+  const dna = encodeCertificateDNA({
+    id: '0x' + '0'.repeat(32),
+    issuer: { id: clusterId, name: issuerName, description: issuerDescription },
+    subject: {
+      id: entry.recipientAddress,
+      type: 'CourseCertificate',
+      name: entry.recipientName,
+      courseName: entry.courseName,
+      completionDate: entry.completionDate,
+      grade: entry.grade,
+      score: entry.score,
+      skills: entry.skills && entry.skills.length > 0 ? entry.skills : undefined,
+      metadata: {
+        layout: effectiveLayout,
+        theme: effectiveTheme,
+        customColor: effectiveCustomColor,
+        customTitle: effectiveCustomTitle,
+      },
+    },
+    expirationDate: entry.expirationDate || expirationDate,
+  });
+
+  const dnaJson = serializeDNA(dna);
+
+  const hasValidCluster = Boolean(
+    clusterId &&
+    clusterId.startsWith('0x') &&
+    clusterId.length === 66
+  );
+
+  let dataBytes: number;
+  try {
+    const rawPacked = packRawSporeData({
+      contentType: 'application/json',
+      content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
+      clusterId: hasValidCluster ? (clusterId as `0x${string}`) : undefined,
+    });
+    dataBytes = rawPacked.length;
+  } catch {
+    const dnaBytes = new TextEncoder().encode(dnaJson).length;
+    dataBytes = (hasValidCluster ? 76 : 40) + dnaBytes;
+  }
+
+  // According to CKB Cell Model (RFC 0017 / RFC 0022):
+  // Occupied capacity (in CKB) = 8 (capacity uint64) + lockOccupiedSize + typeOccupiedSize + dataBytes
+  // Spore type script: 32B codeHash + 1B hashType + 32B sporeId = 65 bytes
+  const typeOccupiedSize = 65;
+  const capacityFieldSize = 8;
+
+  return capacityFieldSize + lockOccupiedSize + typeOccupiedSize + dataBytes;
+}
+
+/**
+ * Calculate the exact CKB capacity for all valid entries in a batch.
+ */
+export async function calculateBatchCapacity(
+  entries: BatchEntry[],
+  options: {
+    clusterId: string;
+    issuerName?: string;
+    issuerDescription?: string;
+    defaultStyle?: VisualStyleConfig;
+    expirationDate?: string;
+    client?: ccc.Client;
+  }
+): Promise<{
+  totalCapacity: number;
+  formattedTotalCapacity: string;
+  entriesWithCapacity: BatchEntry[];
+}> {
+  const entriesWithCapacity: BatchEntry[] = [];
+  let totalCapacity = 0;
+
+  for (const entry of entries) {
+    if (!entry.valid) {
+      entriesWithCapacity.push(entry);
+      continue;
+    }
+
+    try {
+      const cap = await calculateEntryCapacity(entry, options);
+      totalCapacity += cap;
+      entriesWithCapacity.push({
+        ...entry,
+        exactCapacity: cap,
+      });
+    } catch {
+      const fallback = CKB_PER_CERTIFICATE;
+      totalCapacity += fallback;
+      entriesWithCapacity.push({
+        ...entry,
+        exactCapacity: fallback,
+      });
+    }
+  }
+
+  return {
+    totalCapacity,
+    formattedTotalCapacity: `${totalCapacity.toLocaleString()} CKB`,
+    entriesWithCapacity,
+  };
+}
+
+/**
  * Preview batch issuance
  */
 export function previewBatch(
@@ -201,7 +364,15 @@ export function previewBatch(
     warnings.push('Large batch may take several minutes to process');
   }
 
-  const fee = `${validEntries.length * CKB_PER_CERTIFICATE} CKB`;
+  // If exact capacities were already computed on validEntries, use them
+  const hasExact = validEntries.some((e) => e.exactCapacity !== undefined);
+  const totalExact = hasExact
+    ? validEntries.reduce((sum, e) => sum + (e.exactCapacity || CKB_PER_CERTIFICATE), 0)
+    : undefined;
+
+  const fee = totalExact !== undefined
+    ? `${totalExact.toLocaleString()} CKB`
+    : `${validEntries.length * CKB_PER_CERTIFICATE} CKB`;
 
   return {
     clusterId,
@@ -213,6 +384,7 @@ export function previewBatch(
     invalidCount: invalidEntries.length,
     estimatedFee: fee,
     estimatedTotalCapacity: fee,
+    exactTotalCapacity: totalExact,
     warnings,
   };
 }

@@ -116,6 +116,12 @@ vi.mock('@ckb-ccc/spore/advanced', () => ({
       content: data,
     };
   }),
+  packRawSporeData: vi.fn().mockImplementation((data: any) => {
+    const contentLen = data?.content ? (data.content.length ?? 0) : 0;
+    const hasCluster = Boolean(data?.clusterId);
+    const overhead = hasCluster ? 76 : 40;
+    return new Uint8Array(overhead + contentLen);
+  }),
 }));
 
 // Mock @ckb-ccc/core

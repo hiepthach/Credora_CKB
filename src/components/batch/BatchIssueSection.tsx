@@ -17,7 +17,7 @@ function getBatchErrorHint(errorMessage?: string): { hint: string; link?: { labe
 
   if (msg.includes('capacity') || msg.includes('balance') || msg.includes('faucet') || msg.includes('not enough')) {
     return {
-      hint: 'Wallet has insufficient CKB capacity (each certificate requires at least ~151 CKB to create an on-chain Spore cell). Please deposit more CKB into your issuer wallet.',
+      hint: 'Wallet has insufficient CKB capacity. Each certificate requires 400–1000 CKB depending on data size. Please deposit more CKB from the faucet.',
       link: {
         label: 'Get free testnet CKB from Faucet →',
         href: 'https://faucet.nervos.org',
@@ -133,20 +133,44 @@ export function BatchIssueSection({
 
   const handleFileSelect = useCallback((file: File) => {
     async function parseFile() {
-      const { parseBatchFile } = await import('@/lib/credentials');
+      const { parseBatchFile, calculateBatchCapacity } = await import('@/lib/credentials');
       const { entries: parsedEntries } = await parseBatchFile(file);
       const validated = validateBatchEntries(parsedEntries);
-      setEntries(validated.entries);
+
+      let finalEntries = validated.entries;
+      let totalCap: number | undefined;
 
       if (clusterId) {
-        const previewData = previewBatch(validated.entries, clusterId);
+        try {
+          const capRes = await calculateBatchCapacity(validated.entries, {
+            clusterId,
+            issuerName: cluster?.name,
+            issuerDescription: cluster?.description,
+            client: signer?.client,
+          });
+          finalEntries = capRes.entriesWithCapacity;
+          totalCap = capRes.totalCapacity;
+        } catch {
+          // fallback to entries without calculated capacity
+        }
+      }
+
+      setEntries(finalEntries);
+
+      if (clusterId) {
+        const previewData = previewBatch(finalEntries, clusterId);
+        if (totalCap !== undefined) {
+          previewData.exactTotalCapacity = totalCap;
+          previewData.estimatedFee = `${totalCap.toLocaleString()} CKB`;
+          previewData.estimatedTotalCapacity = `${totalCap.toLocaleString()} CKB`;
+        }
         setPreview(previewData);
       }
 
       setStep('preview');
     }
     parseFile();
-  }, [clusterId]);
+  }, [clusterId, cluster, signer]);
 
   const issueMutation = useMutation({
     mutationFn: async (styleConfig?: VisualStyleConfig) => {
@@ -220,6 +244,11 @@ export function BatchIssueSection({
         <BatchPreview
           entries={entries}
           estimatedCost={preview.estimatedFee}
+          exactTotalCapacity={preview.exactTotalCapacity}
+          clusterId={clusterId}
+          issuerName={cluster?.name}
+          issuerDescription={cluster?.description}
+          client={signer?.client}
           onConfirm={(defaultStyle) => {
             setSelectedStyle(defaultStyle);
             setStep('issuing');

@@ -156,6 +156,82 @@ export async function issueCertificate(
   throw new Error('Live signer is required to issue a certificate');
 }
 
+/**
+ * Preview certificate minting — builds a transaction skeleton WITHOUT sending
+ * to determine the exact CKB capacity that will be locked.
+ *
+ * Uses the same transaction building logic as issueCertificate() but reads
+ * the output capacity from the built transaction before sending.
+ */
+export async function previewCertificateMint(
+  signer: ccc.Signer,
+  params: {
+    clusterId: string;
+    issuerName: string;
+    issuerDescription?: string;
+    subject: CredentialSubject;
+    expirationDate?: string;
+  }
+): Promise<{ exactCapacity: number; dnaBytes: number; sporeId: string }> {
+  const { clusterId, issuerName, issuerDescription, subject, expirationDate } = params;
+
+  // Generate certificate ID for DNA encoding
+  const certificateId = generateCertificateId();
+
+  // Encode DNA
+  const dna = encodeCertificateDNA({
+    id: certificateId,
+    issuer: { id: clusterId, name: issuerName, description: issuerDescription },
+    subject,
+    expirationDate,
+  });
+  const dnaJson = serializeDNA(dna);
+  const dnaBytes = new TextEncoder().encode(dnaJson).length;
+
+  // Resolve recipient lock script
+  const recipientInput = subject.id || '';
+  if (!recipientInput) {
+    throw new Error('Recipient identifier (address or DID) is required');
+  }
+
+  const resolved = await resolveRecipientInput(signer.client, recipientInput);
+  const recipientLockScript = resolved.targetLock;
+
+  // Check cluster validity
+  const hasValidCluster = Boolean(
+    clusterId &&
+    clusterId.startsWith('0x') &&
+    clusterId.length === 66
+  );
+
+  // Build transaction skeleton — this does NOT send the transaction
+  const { tx, id: sporeId } = await createSpore({
+    signer,
+    data: {
+      contentType: 'application/json',
+      content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
+      clusterId: hasValidCluster ? (clusterId as `0x${string}`) : undefined,
+    },
+    to: recipientLockScript,
+    clusterMode: hasValidCluster ? 'clusterCell' : undefined,
+  });
+
+  // Read EXACT capacity from the output cell
+  // outputCell.capacity is in shannons (1 CKB = 10^8 shannons)
+  const outputs = tx.outputs ?? [];
+  if (!outputs.length) {
+    throw new Error('Failed to build Spore cell — no output cells in transaction');
+  }
+
+  // DOB (Spore) cell is always the first output
+  // When clusterMode='clusterCell', outputs = [DOB cell (index 0), cluster cell (index 1)]
+  // DOB cell is added by createSpore(), cluster cell is added by prepareCluster() after
+  const outputCell = outputs[0];
+  const exactCapacity = Number(outputCell.capacity) / 100_000_000;
+
+  return { exactCapacity, dnaBytes, sporeId };
+}
+
 export function isCertificateJson(text: string): boolean {
   return (
     text.includes('@context') &&

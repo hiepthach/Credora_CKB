@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, Button, Badge } from '@/components/ui';
 import { PaperCertificate } from '@/components/certificate';
 import type {
@@ -24,6 +24,11 @@ import {
 export interface BatchPreviewProps {
   entries: BatchEntry[];
   estimatedCost: string;
+  exactTotalCapacity?: number;
+  clusterId?: string;
+  issuerName?: string;
+  issuerDescription?: string;
+  client?: any;
   onConfirm: (defaultStyle: VisualStyleConfig) => void;
   onCancel: () => void;
   loading?: boolean;
@@ -50,6 +55,11 @@ const THEME_OPTIONS: { id: CertificateTheme; label: string; color: string }[] = 
 export function BatchPreview({
   entries,
   estimatedCost,
+  exactTotalCapacity,
+  clusterId,
+  issuerName,
+  issuerDescription,
+  client,
   onConfirm,
   onCancel,
   loading = false,
@@ -62,20 +72,60 @@ export function BatchPreview({
     customTitle: '',
   });
 
-  const validCount = entries.filter((e) => e.valid).length;
-  const invalidCount = entries.filter((e) => !e.valid).length;
+  const [liveEntries, setLiveEntries] = useState<BatchEntry[]>(entries);
+  const [liveCost, setLiveCost] = useState<string>(estimatedCost);
+  const [liveExactCapacity, setLiveExactCapacity] = useState<number | undefined>(exactTotalCapacity);
+  const [isRecalculating, setIsRecalculating] = useState<boolean>(false);
 
-  const updateStyleField = <K extends keyof VisualStyleConfig>(
+  // Auto-recalculate exact CKB capacities when style changes
+  useEffect(() => {
+    if (!clusterId) {
+      setLiveEntries(entries);
+      setLiveCost(estimatedCost);
+      setLiveExactCapacity(exactTotalCapacity);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsRecalculating(true);
+      try {
+        const { calculateBatchCapacity } = await import('@/lib/credentials');
+        const res = await calculateBatchCapacity(entries, {
+          clusterId,
+          issuerName: issuerName || 'Accredited Institution',
+          issuerDescription,
+          defaultStyle,
+          client,
+        });
+        setLiveEntries(res.entriesWithCapacity);
+        setLiveCost(`${res.totalCapacity.toLocaleString()} CKB`);
+        setLiveExactCapacity(res.totalCapacity);
+      } catch {
+        setLiveEntries(entries);
+        setLiveCost(estimatedCost);
+        setLiveExactCapacity(exactTotalCapacity);
+      } finally {
+        setIsRecalculating(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [entries, defaultStyle, clusterId, issuerName, issuerDescription, client, estimatedCost, exactTotalCapacity]);
+
+  const validCount = liveEntries.filter((e) => e.valid).length;
+  const invalidCount = liveEntries.filter((e) => !e.valid).length;
+
+  function updateStyleField<K extends keyof VisualStyleConfig>(
     field: K,
     value: VisualStyleConfig[K]
-  ) => {
+  ) {
     setDefaultStyle((prev) => ({
       ...prev,
       [field]: value,
     }));
-  };
+  }
 
-  const firstValidEntry = entries.find((e) => e.valid) || entries[0];
+  const firstValidEntry = liveEntries.find((e) => e.valid) || liveEntries[0];
 
   const previewCertificate: CertificateDNA = useMemo(() => {
     return {
@@ -356,11 +406,12 @@ export function BatchPreview({
                 <th className="text-left py-2 px-3 text-slate-400 font-medium">Course</th>
                 <th className="text-left py-2 px-3 text-slate-400 font-medium">Expires</th>
                 <th className="text-left py-2 px-3 text-slate-400 font-medium">Style</th>
+                <th className="text-left py-2 px-3 text-slate-400 font-medium">Capacity</th>
                 <th className="text-left py-2 px-3 text-slate-400 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
-              {entries.slice(0, 10).map((entry) => (
+              {liveEntries.slice(0, 10).map((entry) => (
                 <tr
                   key={entry.row}
                   className="border-b border-slate-800 hover:bg-slate-800/50"
@@ -379,6 +430,15 @@ export function BatchPreview({
                       </Badge>
                     ) : (
                       <span className="text-slate-500 font-mono text-[11px]">(Global)</span>
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-xs font-mono">
+                    {entry.valid && entry.exactCapacity ? (
+                      <span className="text-bone-white font-medium">
+                        {entry.exactCapacity.toLocaleString()} CKB
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">-</span>
                     )}
                   </td>
                   <td className="py-2 px-3">
@@ -408,18 +468,44 @@ export function BatchPreview({
               ))}
             </tbody>
           </table>
-          {entries.length > 10 && (
+          {liveEntries.length > 10 && (
             <p className="text-sm text-slate-500 text-center py-2">
-              ... and {entries.length - 10} more entries
+              ... and {liveEntries.length - 10} more entries
             </p>
           )}
         </div>
 
         {/* Cost Estimate */}
-        <div className="p-4 bg-slate-800 rounded-lg mb-6">
+        <div className="p-4 bg-slate-800 rounded-lg mb-6 border border-slate-700/50">
           <div className="flex justify-between items-center">
-            <span className="text-slate-400">Estimated Cost</span>
-            <span className="text-lg font-semibold text-white">{estimatedCost}</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-300 font-medium">Total Locked Capacity</span>
+                {liveExactCapacity && !isRecalculating && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30">
+                    Exact on-chain
+                  </span>
+                )}
+                {isRecalculating && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-lavender-spark/15 text-lavender-spark border border-lavender-spark/30 animate-pulse">
+                    Calculating exact CKB...
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Exact CKB required to lock all certificates · 100% reclaimable by melting
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-xl font-bold text-green-400 font-mono">
+                {liveCost}
+              </span>
+              {liveExactCapacity && validCount > 0 && (
+                <span className="block text-xs text-slate-400 mt-0.5">
+                  avg. ~{Math.round(liveExactCapacity / validCount).toLocaleString()} CKB / cert
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

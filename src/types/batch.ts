@@ -23,6 +23,8 @@ export interface BatchEntry {
   isDid?: boolean;
   /** Error message if DID resolution failed */
   resolutionError?: string;
+  /** Exact CKB capacity required to lock on-chain for this certificate */
+  exactCapacity?: number;
 }
 
 export interface ParseBatchResult {
@@ -86,6 +88,8 @@ export interface BatchPreview {
   invalidCount?: number;
   estimatedFee: string;
   estimatedTotalCapacity?: string;
+  /** Exact total CKB capacity required for all valid certificates in this batch */
+  exactTotalCapacity?: number;
   warnings: string[];
 }
 

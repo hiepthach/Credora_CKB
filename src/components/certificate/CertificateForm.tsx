@@ -70,7 +70,7 @@ export function CertificateForm({
   onCancel,
   loading = false,
 }: CertificateFormProps) {
-  const { client } = useWallet();
+  const { client, signer } = useWallet();
   const [resolvedInfo, setResolvedInfo] = useState<{
     address: string;
     isDid: boolean;
@@ -95,6 +95,9 @@ export function CertificateForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [skillsInput, setSkillsInput] = useState('');
+  const [certCapacity, setCertCapacity] = useState<number | null>(null);
+  const [isCalculatingCapacity, setIsCalculatingCapacity] = useState(false);
+  const [lastCalculatedHash, setLastCalculatedHash] = useState<string>('');
 
   // DID resolution effect
   useEffect(() => {
@@ -162,6 +165,74 @@ export function CertificateForm({
       onChange(formData);
     }
   }, []);
+
+  // Auto-calculate exact CKB capacity when form data changes
+  useEffect(() => {
+    // Check if all required fields are filled
+    if (!signer || !formData.courseName.trim() || !formData.recipientName.trim() || !formData.completionDate) {
+      setCertCapacity(null);
+      return;
+    }
+
+    const parsedSkills = skillsInput.trim()
+      ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
+    // Create hash of relevant form fields to detect actual changes
+    const fieldHash = JSON.stringify({
+      recipientAddress: formData.recipientAddress,
+      recipientName: formData.recipientName,
+      courseName: formData.courseName,
+      completionDate: formData.completionDate,
+      expirationDate: formData.expirationDate,
+      grade: formData.grade,
+      score: formData.score,
+      skills: parsedSkills,
+      layout: formData.layout,
+      theme: formData.theme,
+      customColor: formData.customColor,
+      customTitle: formData.customTitle,
+    });
+
+    // Skip if fields haven't changed
+    if (fieldHash === lastCalculatedHash) return;
+
+    const timer = setTimeout(async () => {
+      setIsCalculatingCapacity(true);
+      try {
+        const { previewCertificateMint } = await import('@/lib/credentials');
+        const result = await previewCertificateMint(signer as any, {
+          clusterId,
+          issuerName: clusterName,
+          subject: {
+            id: formData.recipientAddress,
+            type: 'CourseCertificate',
+            name: formData.recipientName,
+            courseName: formData.courseName,
+            completionDate: formData.completionDate,
+            grade: formData.grade,
+            score: formData.score,
+            skills: parsedSkills,
+            metadata: {
+              layout: formData.layout,
+              theme: formData.theme,
+              customColor: formData.customColor,
+              customTitle: formData.customTitle,
+            },
+          },
+          expirationDate: formData.expirationDate,
+        });
+        setCertCapacity(result.exactCapacity);
+        setLastCalculatedHash(fieldHash);
+      } catch {
+        setCertCapacity(null);
+      } finally {
+        setIsCalculatingCapacity(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -559,14 +630,29 @@ export function CertificateForm({
         </div>
       </div>
 
-      {/* CKB Capacity Info */}
+      {/* CKB Capacity Info — auto-calculated */}
       <div className="bg-muted/30 rounded-lg p-3 border border-fog-line/20">
-        <div className="flex items-center gap-2 text-sm">
-          <Lock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">200 CKB</span> will be locked on-chain
-          </span>
-        </div>
+        {isCalculatingCapacity ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <span className="text-muted-foreground">Calculating capacity...</span>
+          </div>
+        ) : certCapacity ? (
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span className="text-muted-foreground">
+              <span className="font-medium text-foreground">{certCapacity.toLocaleString()} CKB</span>
+              {' '}will be locked on-chain
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Enter recipient details to see exact cost
+            </span>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           Capacity is reclaimable by melting the certificate
         </p>
