@@ -315,7 +315,7 @@ export function BatchIssueSection({
               </>
             ) : result.successful === 0 ? (
               <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-400">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-600 dark:text-red-400">
                   <AlertTriangle className="w-9 h-9" />
                 </div>
                 <h2 className="text-xl font-bold text-bone-white tracking-tight">
@@ -327,7 +327,7 @@ export function BatchIssueSection({
               </>
             ) : (
               <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center justify-center text-yellow-400">
+                <div className="w-16 h-16 mx-auto mb-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-yellow-400">
                   <AlertTriangle className="w-9 h-9" />
                 </div>
                 <h2 className="text-xl font-bold text-bone-white tracking-tight">
@@ -347,7 +347,7 @@ export function BatchIssueSection({
               <div className="text-xs text-mid-ash uppercase tracking-wider">Successful</div>
             </div>
             <div className="flex-1 p-4 bg-midnight-plum rounded-xl border border-fog-line/10 text-center">
-              <div className="text-2xl font-bold text-red-400">{result.failed}</div>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{result.failed}</div>
               <div className="text-xs text-mid-ash uppercase tracking-wider">Failed</div>
             </div>
           </div>
@@ -375,7 +375,7 @@ export function BatchIssueSection({
             const sortedGroups = Object.values(groups).sort((a, b) => b.count - a.count);
 
             return (
-              <div className="mb-6 p-4 rounded-xl bg-midnight-plum/50 border border-fog-line/10">
+              <div className="mb-6 p-4 rounded-xl bg-deep-indigo/40 dark:bg-midnight-plum/50 border border-fog-line/10">
                 <div className="text-xs font-semibold text-mid-ash uppercase tracking-wider mb-3">
                   Error Summary — {result.failed} failed ({sortedGroups.length} error type{sortedGroups.length > 1 ? 's' : ''})
                 </div>
@@ -396,9 +396,9 @@ export function BatchIssueSection({
                       other: 'Other Error',
                     };
                     return (
-                      <div key={group.category} className="p-3 bg-midnight-plum rounded-lg border border-fog-line/10">
+                      <div key={group.category} className="p-3 bg-white dark:bg-midnight-plum rounded-lg border border-fog-line/10 shadow-xs">
                         <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <span className="text-xs font-semibold text-red-400">
+                          <span className="text-xs font-semibold text-red-600 dark:text-red-400">
                             {categoryLabels[group.category] || group.category}
                           </span>
                           <span className="text-xs text-mid-ash font-mono bg-red-500/10 px-2 py-0.5 rounded-full">
@@ -409,7 +409,7 @@ export function BatchIssueSection({
                           Rows: {group.rows.slice(0, 8).join(', ')}{group.rows.length > 8 ? ` +${group.rows.length - 8} more` : ''}
                         </div>
                         {hintObj && (
-                          <div className="text-[11px] text-yellow-300/80 leading-relaxed">
+                          <div className="text-[11px] text-amber-800 dark:text-yellow-300/80 leading-relaxed font-medium dark:font-normal">
                             {hintObj.hint}
                           </div>
                         )}
@@ -423,9 +423,9 @@ export function BatchIssueSection({
 
           {/* Detailed Error Breakdown Box */}
           {result.failed > 0 && (
-            <div className="mb-6 p-4 rounded-xl bg-red-950/30 border border-red-800/40 text-left space-y-3">
+            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-left space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-red-400 font-semibold text-xs uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-xs uppercase tracking-wider">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>Issuance Error Details ({result.failed} failed certificate{result.failed > 1 ? 's' : ''})</span>
                 </div>
@@ -458,7 +458,7 @@ export function BatchIssueSection({
                     return (
                       <div
                         key={cert.row}
-                        className="p-3 bg-midnight-plum/80 rounded-lg border border-red-500/20 text-xs space-y-1.5"
+                        className="p-3 bg-white dark:bg-midnight-plum/80 rounded-lg border border-red-200 dark:border-red-500/20 text-xs space-y-1.5 shadow-xs"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                           <span className="font-semibold text-bone-white">
@@ -468,11 +468,11 @@ export function BatchIssueSection({
                             {truncateAddress(cert.recipientAddress, 10, 6)}
                           </span>
                         </div>
-                        <div className="text-red-400 font-mono text-[11px] break-all">
+                        <div className="text-red-600 dark:text-red-400 font-mono text-[11px] break-all">
                           Error: {cert.error || 'Issuance failed'}
                         </div>
                         {hintObj && (
-                          <div className="pt-1 text-[11px] text-yellow-300/90 flex flex-col gap-1 border-t border-fog-line/10">
+                          <div className="pt-1 text-[11px] text-amber-800 dark:text-yellow-300/90 flex flex-col gap-1 border-t border-fog-line/10 font-medium dark:font-normal">
                             <div>{hintObj.hint}</div>
                             {hintObj.link && (
                               <a
@@ -509,7 +509,7 @@ export function BatchIssueSection({
                 </thead>
                 <tbody>
                   {result.certificates.slice(0, 50).map((cert) => (
-                    <tr key={cert.row} className="border-b border-fog-line/5 hover:bg-white/[0.02]">
+                    <tr key={cert.row} className="border-b border-fog-line/5 hover:bg-deep-indigo/40 dark:hover:bg-white/[0.02]">
                       <td className="py-2 px-3 text-mid-ash">{cert.row}</td>
                       <td className="py-2 px-3 text-bone-white font-medium truncate max-w-[120px]">
                         {cert.recipientName || '-'}
@@ -530,7 +530,7 @@ export function BatchIssueSection({
                             {cert.certificateId ? truncateAddress(cert.certificateId, 8, 6) : '-'}
                           </span>
                         ) : (
-                          <span className="text-red-400 text-xs font-mono truncate block max-w-sm" title={cert.error}>
+                          <span className="text-red-600 dark:text-red-400 text-xs font-mono truncate block max-w-sm" title={cert.error}>
                             {cert.error || 'Failed'}
                           </span>
                         )}
@@ -569,19 +569,19 @@ export function BatchIssueSection({
 
       {/* Error */}
       {issueMutation.isError && (
-        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl space-y-3">
-          <div className="flex items-center gap-2 text-red-400 font-semibold text-xs uppercase tracking-wider">
+        <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 rounded-xl space-y-3">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-xs uppercase tracking-wider">
             <AlertCircle className="w-4 h-4" />
             <span>Batch Issuance Failed</span>
           </div>
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-red-700 dark:text-red-400">
             Failed to issue certificates: {issueMutation.error?.message || 'Unknown error'}
           </p>
           {(() => {
             const hintObj = getBatchErrorHint(issueMutation.error?.message);
             if (!hintObj) return null;
             return (
-              <div className="p-3 bg-midnight-plum/80 rounded-lg border border-red-500/20 text-xs text-yellow-300/90 space-y-1">
+              <div className="p-3 bg-white dark:bg-midnight-plum/80 rounded-lg border border-red-200 dark:border-red-500/20 text-xs text-amber-800 dark:text-yellow-300/90 space-y-1 font-medium dark:font-normal">
                 <div>{hintObj.hint}</div>
                 {hintObj.link && (
                   <a

@@ -55,8 +55,8 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
         className={`
           flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 text-xs font-medium
           ${isOpen
-            ? 'bg-shadow-plum border-lavender-spark/50 text-bone-white shadow-glow-sm'
-            : 'bg-shadow-plum/70 border-fog-line/15 text-ash-veil hover:text-bone-white hover:border-fog-line/30'
+            ? 'bg-shadow-plum border-lavender-spark/50 text-bone-white shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:shadow-[0_0_15px_rgba(185,151,255,0.2)]'
+            : 'bg-shadow-plum/70 border-fog-line/15 text-ash-veil hover:text-bone-white hover:border-lavender-spark/40 hover:shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:hover:shadow-[0_0_15px_rgba(185,151,255,0.2)]'
           }
         `}
       >
@@ -102,7 +102,7 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
                   <div className="flex items-center gap-2">
                     {isSelected && <Check className="w-4 h-4 text-signal-green" />}
                     {net === 'mainnet' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-950/60 text-red-400 font-semibold border border-red-800/40">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-signal-green/10 dark:bg-signal-green/15 text-signal-green font-semibold border border-signal-green/30 tracking-wide">
                         LIVE
                       </span>
                     )}
@@ -114,9 +114,9 @@ export function NetworkSelector({ className = '' }: NetworkSelectorProps) {
 
           {/* Warning for mainnet */}
           {network === 'mainnet' && (
-            <div className="mx-3 mb-3 p-2.5 bg-red-950/40 border border-red-800/40 rounded-xl flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
-              <p className="text-xs text-red-300 leading-relaxed">
+            <div className="mx-3 mb-3 p-2.5 bg-amber-500/10 dark:bg-ember-orange/15 border border-amber-500/30 dark:border-ember-orange/30 rounded-xl flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-ember-orange mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+              <p className="text-xs text-amber-950 dark:text-orange-200 leading-relaxed">
                 You are connected to mainnet. Real CKB transactions will occur.
               </p>
             </div>

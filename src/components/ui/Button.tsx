@@ -16,11 +16,11 @@ const variantStyles = {
   primary:
     'bg-signal-green bg-iris text-white dark:text-black font-medium hover:bg-signal-green/90 hover:shadow-glow-green border border-transparent active:scale-[0.98]',
   secondary:
-    'bg-shadow-plum bg-deep-indigo hover:bg-[#383042] text-bone-white text-lilac-white border border-fog-line/15 border-dusk/30 hover:border-fog-line/30 active:scale-[0.98]',
+    'bg-deep-indigo hover:bg-lavender-spark/15 dark:hover:bg-[#383042] text-bone-white border border-fog-line/15 hover:border-lavender-spark/30 dark:hover:border-fog-line/30 active:scale-[0.98]',
   danger:
-    'bg-red-950/60 bg-red-900/50 hover:bg-red-900/70 text-red-300 border border-red-800/50 active:scale-[0.98]',
+    'bg-red-900/10 dark:bg-red-900/50 hover:bg-red-500/20 dark:hover:bg-red-900/70 text-red-600 dark:text-red-300 border border-red-300/40 dark:border-red-800/50 active:scale-[0.98]',
   ghost:
-    'bg-transparent hover:bg-shadow-plum/60 text-ash-veil hover:text-bone-white border border-transparent hover:border-fog-line/15 active:scale-[0.98]',
+    'bg-transparent hover:bg-lavender-spark/10 dark:hover:bg-shadow-plum/60 text-ash-veil hover:text-bone-white border border-transparent hover:border-fog-line/15 active:scale-[0.98]',
 };
 
 const sizeStyles = {

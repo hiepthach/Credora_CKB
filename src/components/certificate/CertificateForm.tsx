@@ -70,7 +70,7 @@ export function CertificateForm({
   onCancel,
   loading = false,
 }: CertificateFormProps) {
-  const { client, signer } = useWallet();
+  const { client, signer, address: connectedAddress } = useWallet();
   const [resolvedInfo, setResolvedInfo] = useState<{
     address: string;
     isDid: boolean;
@@ -79,8 +79,13 @@ export function CertificateForm({
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
 
+  const initialRecipient =
+    defaultRecipientAddress && defaultRecipientAddress !== connectedAddress
+      ? defaultRecipientAddress
+      : '';
+
   const [formData, setFormData] = useState<CertificateData>({
-    recipientAddress: defaultRecipientAddress || '',
+    recipientAddress: initialRecipient,
     recipientName: '',
     courseName: '',
     completionDate: new Date().toISOString().split('T')[0],
@@ -328,15 +333,19 @@ export function CertificateForm({
             <label className="block text-xs font-medium text-ash-veil">
               Recipient Address or DID <span className="text-lavender-spark">*</span>
             </label>
-            {defaultRecipientAddress && formData.recipientAddress !== defaultRecipientAddress && (
-              <button
-                type="button"
-                onClick={() => updateField('recipientAddress', defaultRecipientAddress)}
-                className="text-[11px] text-lavender-spark hover:underline"
-              >
-                Use my connected address
-              </button>
-            )}
+            {(() => {
+              const quickAddress = defaultRecipientAddress || connectedAddress;
+              if (!quickAddress || formData.recipientAddress === quickAddress) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={() => updateField('recipientAddress', quickAddress)}
+                  className="text-[11px] text-lavender-spark hover:underline"
+                >
+                  Use my connected address
+                </button>
+              );
+            })()}
           </div>
           <Input
             placeholder="ckt1qzda0cr08m85hc8j... or did:ckb:..."
@@ -344,6 +353,7 @@ export function CertificateForm({
             onChange={(v) => updateField('recipientAddress', v)}
             error={errors.recipientAddress}
             required
+            autoComplete="off"
           />
           {/* DID Resolution Preview */}
           {isResolving && (

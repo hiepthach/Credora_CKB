@@ -112,10 +112,10 @@ did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc,Hannie Kim,CKB Basics,2026-01-16,,B+,88
   return (
     <Card variant="default" padding="lg">
       <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold text-white mb-2">
+        <h2 className="text-xl font-semibold text-bone-white mb-2">
           Batch Certificate Issuance
         </h2>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-ash-veil">
           Upload a CSV or JSON file to issue multiple certificates at once
         </p>
       </div>
@@ -126,10 +126,10 @@ did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc,Hannie Kim,CKB Basics,2026-01-16,,B+,88
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
+          border-2 border-dashed rounded-xl p-8 text-center transition-all
           ${isDragging
-            ? 'border-blue-500 bg-blue-500/10'
-            : 'border-slate-600 hover:border-slate-500'
+            ? 'border-lavender-spark bg-lavender-spark/10'
+            : 'border-fog-line/20 hover:border-lavender-spark/50 bg-midnight-plum/30 hover:bg-midnight-plum/60'
           }
         `}
       >
@@ -144,14 +144,14 @@ did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc,Hannie Kim,CKB Basics,2026-01-16,,B+,88
           htmlFor="batch-file-input"
           className="cursor-pointer flex flex-col items-center gap-3"
         >
-          <div className="w-12 h-12 bg-slate-700 rounded-lg flex items-center justify-center">
-            <Upload className="w-6 h-6 text-blue-500" />
+          <div className="w-12 h-12 bg-deep-indigo rounded-xl border border-fog-line/15 flex items-center justify-center text-lavender-spark">
+            <Upload className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-white font-medium">
+            <p className="text-bone-white font-medium">
               Drop file here or click to browse
             </p>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-mid-ash mt-1">
               Supports CSV and JSON files up to {Math.round(maxSize / 1024 / 1024)}MB
             </p>
           </div>
@@ -162,13 +162,13 @@ did:ckb:3ufnokjbydg6kj6b5fngnee2y2miuabc,Hannie Kim,CKB Basics,2026-01-16,,B+,88
       {error && (
         <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
       {/* Templates */}
-      <div className="mt-6 pt-6 border-t border-slate-700">
-        <p className="text-sm text-slate-400 mb-3">Download templates:</p>
+      <div className="mt-6 pt-6 border-t border-fog-line/10">
+        <p className="text-sm text-ash-veil mb-3">Download templates:</p>
         <div className="flex gap-3">
           <Button variant="secondary" size="sm" onClick={() => downloadTemplate('csv')}>
             <FileText className="w-4 h-4" />

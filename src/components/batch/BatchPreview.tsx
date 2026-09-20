@@ -170,10 +170,10 @@ export function BatchPreview({
     <div className="space-y-6">
       <Card variant="default" padding="lg">
         <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold text-white mb-2">
+          <h2 className="text-xl font-semibold text-bone-white mb-2">
             Preview ({entries.length} certificates)
           </h2>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ash-veil">
             Review the entries and choose your default visual style before issuing certificates
           </p>
         </div>
@@ -181,31 +181,31 @@ export function BatchPreview({
         {/* Stats */}
         <div className="flex gap-4 mb-6">
           <div className="flex-1 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-400">{validCount}</div>
-            <div className="text-sm text-slate-400">Valid</div>
+            <div className="text-2xl font-bold text-signal-green">{validCount}</div>
+            <div className="text-sm text-ash-veil">Valid</div>
           </div>
           <div className="flex-1 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
-            <div className="text-2xl font-bold text-red-400">{invalidCount}</div>
-            <div className="text-sm text-slate-400">Invalid</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{invalidCount}</div>
+            <div className="text-sm text-ash-veil">Invalid</div>
           </div>
         </div>
 
         {/* Progress */}
         {progress && (
-          <div className="mb-6 p-4 bg-slate-800 rounded-lg">
+          <div className="mb-6 p-4 bg-deep-indigo/60 dark:bg-midnight-plum rounded-xl border border-fog-line/15">
             <div className="flex justify-between mb-2">
-              <span className="text-sm text-slate-400">Progress</span>
-              <span className="text-sm text-white">
+              <span className="text-sm text-ash-veil">Progress</span>
+              <span className="text-sm text-bone-white font-mono font-medium">
                 {progress.current} / {progress.total}
               </span>
             </div>
-            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-fog-line/10 dark:bg-midnight-plum/80 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-500 transition-all duration-300"
+                className="h-full bg-lavender-spark transition-all duration-300"
                 style={{ width: `${(progress.current / progress.total) * 100}%` }}
               />
             </div>
-            <div className="mt-2 flex justify-between text-xs text-slate-500">
+            <div className="mt-2 flex justify-between text-xs text-mid-ash">
               <span>{truncateAddress(progress.currentAddress, 8, 6)}</span>
               <span className="capitalize">{progress.status}</span>
             </div>
@@ -225,8 +225,8 @@ export function BatchPreview({
           </div>
 
           {/* Banner explaining row override */}
-          <div className="p-3.5 bg-blue-950/40 border border-blue-800/40 rounded-xl flex items-start gap-2.5 text-xs text-blue-200">
-            <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 rounded-xl flex items-start gap-2.5 text-xs text-blue-700 dark:text-blue-200">
+            <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <p>
               Individual entries with custom layout or customTitle in CSV/JSON will override this default style.
             </p>
@@ -367,8 +367,8 @@ export function BatchPreview({
 
         {/* Invalid entries summary banner */}
         {invalidCount > 0 && (
-          <div className="mb-6 p-4 rounded-xl bg-red-950/30 border border-red-800/40 text-left space-y-2">
-            <div className="flex items-center gap-2 text-red-400 font-semibold text-xs uppercase tracking-wider">
+          <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 text-left space-y-2">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-xs uppercase tracking-wider">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>{invalidCount} Invalid Row{invalidCount > 1 ? 's' : ''} Found in File</span>
             </div>
@@ -381,12 +381,12 @@ export function BatchPreview({
                 .map((e) => (
                   <div
                     key={e.row}
-                    className="text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded-lg bg-midnight-plum/70 border border-red-500/20"
+                    className="text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded-lg bg-white dark:bg-midnight-plum/70 border border-red-200 dark:border-red-500/20"
                   >
                     <span className="font-semibold text-bone-white">
                       Row #{e.row} {e.recipientName ? `• ${e.recipientName}` : ''}
                     </span>
-                    <span className="text-red-400 font-mono text-[11px]">
+                    <span className="text-red-600 dark:text-red-400 font-mono text-[11px]">
                       {e.errors?.join(', ') || 'Validation error'}
                     </span>
                   </div>
@@ -399,37 +399,37 @@ export function BatchPreview({
         <div className="overflow-x-auto mb-6">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">#</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Address</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Name</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Course</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Expires</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Style</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Capacity</th>
-                <th className="text-left py-2 px-3 text-slate-400 font-medium">Status</th>
+              <tr className="border-b border-fog-line/15">
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">#</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Address</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Name</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Course</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Expires</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Style</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Capacity</th>
+                <th className="text-left py-2 px-3 text-mid-ash font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {liveEntries.slice(0, 10).map((entry) => (
                 <tr
                   key={entry.row}
-                  className="border-b border-slate-800 hover:bg-slate-800/50"
+                  className="border-b border-fog-line/10 hover:bg-deep-indigo/40 dark:hover:bg-deep-indigo/30"
                 >
-                  <td className="py-2 px-3 text-slate-500">{entry.row}</td>
-                  <td className="py-2 px-3 font-mono text-white">
+                  <td className="py-2 px-3 text-mid-ash">{entry.row}</td>
+                  <td className="py-2 px-3 font-mono text-bone-white">
                     {truncateAddress(entry.recipientAddress, 8, 6)}
                   </td>
-                  <td className="py-2 px-3 text-white">{entry.recipientName || '-'}</td>
-                  <td className="py-2 px-3 text-white">{entry.courseName}</td>
-                  <td className="py-2 px-3 text-slate-400 text-xs">{entry.expirationDate || 'Never'}</td>
+                  <td className="py-2 px-3 text-bone-white">{entry.recipientName || '-'}</td>
+                  <td className="py-2 px-3 text-bone-white">{entry.courseName}</td>
+                  <td className="py-2 px-3 text-ash-veil text-xs">{entry.expirationDate || 'Never'}</td>
                   <td className="py-2 px-3 text-xs">
                     {entry.layout ? (
                       <Badge variant="neutral" className="capitalize text-[10px]">
                         {entry.layout}
                       </Badge>
                     ) : (
-                      <span className="text-slate-500 font-mono text-[11px]">(Global)</span>
+                      <span className="text-mid-ash font-mono text-[11px]">(Global)</span>
                     )}
                   </td>
                   <td className="py-2 px-3 text-xs font-mono">
@@ -438,7 +438,7 @@ export function BatchPreview({
                         {entry.exactCapacity.toLocaleString()} CKB
                       </span>
                     ) : (
-                      <span className="text-slate-500">-</span>
+                      <span className="text-mid-ash">-</span>
                     )}
                   </td>
                   <td className="py-2 px-3">
@@ -455,7 +455,7 @@ export function BatchPreview({
                         </Badge>
                         {entry.errors && entry.errors.length > 0 && (
                           <span
-                            className="text-[11px] text-red-400 font-normal leading-tight max-w-[200px]"
+                            className="text-[11px] text-red-600 dark:text-red-400 font-normal leading-tight max-w-[200px]"
                             title={entry.errors.join(', ')}
                           >
                             {entry.errors.join(', ')}
@@ -469,20 +469,20 @@ export function BatchPreview({
             </tbody>
           </table>
           {liveEntries.length > 10 && (
-            <p className="text-sm text-slate-500 text-center py-2">
+            <p className="text-sm text-mid-ash text-center py-2">
               ... and {liveEntries.length - 10} more entries
             </p>
           )}
         </div>
 
         {/* Cost Estimate */}
-        <div className="p-4 bg-slate-800 rounded-lg mb-6 border border-slate-700/50">
+        <div className="p-4 bg-deep-indigo/60 dark:bg-deep-indigo/40 rounded-xl mb-6 border border-fog-line/15">
           <div className="flex justify-between items-center">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-slate-300 font-medium">Total Locked Capacity</span>
+                <span className="text-bone-white font-medium">Total Locked Capacity</span>
                 {liveExactCapacity && !isRecalculating && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-signal-green/10 text-signal-green border border-signal-green/30">
                     Exact on-chain
                   </span>
                 )}
@@ -492,16 +492,16 @@ export function BatchPreview({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-ash-veil mt-0.5">
                 Exact CKB required to lock all certificates · 100% reclaimable by melting
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xl font-bold text-green-400 font-mono">
+              <span className="text-xl font-bold text-signal-green font-mono">
                 {liveCost}
               </span>
               {liveExactCapacity && validCount > 0 && (
-                <span className="block text-xs text-slate-400 mt-0.5">
+                <span className="block text-xs text-mid-ash mt-0.5">
                   avg. ~{Math.round(liveExactCapacity / validCount).toLocaleString()} CKB / cert
                 </span>
               )}

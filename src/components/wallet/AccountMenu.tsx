@@ -73,8 +73,8 @@ export function AccountMenu({ className = '' }: AccountMenuProps) {
         className={`
           flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-200 text-xs font-medium group
           ${isOpen
-            ? 'bg-shadow-plum border-lavender-spark/50 text-bone-white shadow-glow-sm'
-            : 'bg-shadow-plum/70 border-fog-line/15 text-ash-veil hover:text-bone-white hover:border-fog-line/30'
+            ? 'bg-shadow-plum border-lavender-spark/50 text-bone-white shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:shadow-[0_0_15px_rgba(185,151,255,0.2)]'
+            : 'bg-shadow-plum/70 border-fog-line/15 text-ash-veil hover:text-bone-white hover:border-lavender-spark/40 hover:shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:hover:shadow-[0_0_15px_rgba(185,151,255,0.2)]'
           }
         `}
       >

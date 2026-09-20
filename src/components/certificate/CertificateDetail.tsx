@@ -188,8 +188,8 @@ export function CertificateDetail({
           )}
           {onMelt && (
             <Button
-              variant="secondary"
-              className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
+              variant="ghost"
+              className="flex-1 min-w-[140px] text-xs gap-1.5 bg-ember-orange/10 dark:bg-ember-orange/15 hover:bg-ember-orange/20 dark:hover:bg-ember-orange/25 text-ember-orange hover:text-ember-orange border border-ember-orange/30 hover:border-ember-orange/50 transition-all active:scale-[0.98]"
               onClick={() => {
                 setMeltModalError(null);
                 setMeltSuccess(false);
@@ -405,8 +405,8 @@ export function CertificateDetail({
 
             {onMelt && (
               <Button
-                variant="secondary"
-                className="flex-1 min-w-[140px] text-xs gap-1.5 border border-orange-500/40 text-orange-400 hover:bg-orange-950/30"
+                variant="ghost"
+                className="flex-1 min-w-[140px] text-xs gap-1.5 bg-ember-orange/10 dark:bg-ember-orange/15 hover:bg-ember-orange/20 dark:hover:bg-ember-orange/25 text-ember-orange hover:text-ember-orange border border-ember-orange/30 hover:border-ember-orange/50 transition-all active:scale-[0.98]"
                 onClick={() => {
                   setMeltModalError(null);
                   setShowMeltModal(true);
@@ -474,16 +474,16 @@ export function CertificateDetail({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="p-3 bg-orange-950/40 border border-orange-700/40 rounded-xl flex items-start gap-3">
-              <Flame className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-orange-200 leading-relaxed">
-                This will <strong>permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
+            <div className="p-3.5 bg-amber-500/10 dark:bg-ember-orange/15 border border-amber-500/30 dark:border-ember-orange/30 rounded-xl flex items-start gap-3 text-xs">
+              <Flame className="w-5 h-5 text-ember-orange flex-shrink-0 mt-0.5" />
+              <p className="text-amber-950 dark:text-orange-200 leading-relaxed">
+                This will <strong className="font-semibold text-ember-orange dark:text-orange-300">permanently destroy</strong> the certificate DOB and return the locked CKB capacity to your wallet. This action cannot be undone.
               </p>
             </div>
 
             {meltModalError && (
-              <div className="p-3 bg-red-950/60 border border-red-800/60 rounded-xl flex items-start gap-2.5 text-xs text-red-300">
-                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/60 rounded-xl flex items-start gap-2.5 text-xs text-red-700 dark:text-red-300">
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 <span className="leading-relaxed">{meltModalError}</span>
               </div>
             )}

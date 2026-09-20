@@ -164,4 +164,46 @@ describe('CertificateForm Style Selection & Color Picker', () => {
       })
     );
   });
+
+  it('initializes recipient address to empty when defaultRecipientAddress is omitted', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const recipientInput = screen.getByPlaceholderText(/ckt1qzda0cr08m85hc8j/i) as HTMLInputElement;
+    expect(recipientInput.value).toBe('');
+  });
+
+  it('allows clicking "Use my connected address" when wallet is connected', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1q_connected_user_wallet_address',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const recipientInput = screen.getByPlaceholderText(/ckt1qzda0cr08m85hc8j/i) as HTMLInputElement;
+    expect(recipientInput.value).toBe('');
+
+    const useMyAddressButton = screen.getByRole('button', { name: /Use my connected address/i });
+    expect(useMyAddressButton).toBeInTheDocument();
+
+    fireEvent.click(useMyAddressButton);
+    expect(recipientInput.value).toBe('ckt1q_connected_user_wallet_address');
+  });
 });

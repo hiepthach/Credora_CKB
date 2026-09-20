@@ -107,7 +107,7 @@ function IssuePageContent() {
 
   // Live preview form state
   const [liveFormData, setLiveFormData] = useState<CertificateData>({
-    recipientAddress: address || '',
+    recipientAddress: '',
     recipientName: '',
     courseName: '',
     completionDate: new Date().toISOString().split('T')[0],
@@ -162,7 +162,7 @@ function IssuePageContent() {
         issuerName: cluster.name,
         issuerDescription: cluster.description,
         subject: {
-          id: data.recipientAddress || address || '',
+          id: data.recipientAddress,
           type: 'CourseCertificate',
           name: data.recipientName,
           courseName: data.courseName,
@@ -352,7 +352,6 @@ function IssuePageContent() {
                   <CertificateForm
                     clusterId={activeClusterId || ''}
                     clusterName={cluster.name}
-                    defaultRecipientAddress={address || ''}
                     defaultLayout={queryLayout || 'classic'}
                     defaultTheme={queryTheme || 'blue'}
                     onChange={setLiveFormData}

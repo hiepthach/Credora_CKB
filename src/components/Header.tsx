@@ -41,15 +41,22 @@ export function Header() {
             {/* Center: Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive =
+                  item.href === '/'
+                    ? pathname === '/'
+                    : item.href === '/certificates'
+                    ? pathname === '/certificates' ||
+                      (pathname.startsWith('/certificates/') && !pathname.startsWith('/certificates/issue'))
+                    : pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`px-3.5 py-1.5 text-sm rounded-xl font-medium transition-all duration-200 ${isActive
-                        ? 'text-bone-white bg-shadow-plum border border-fog-line/15 shadow-sm'
-                        : 'text-ash-veil hover:text-bone-white hover:bg-shadow-plum/50'
-                      }`}
+                    className={`px-3.5 py-1.5 text-sm rounded-xl font-medium transition-all duration-200 border ${
+                      isActive
+                        ? 'text-lavender-spark bg-lavender-spark/10 border-lavender-spark/30 shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:bg-shadow-plum dark:text-lavender-spark dark:border-lavender-spark/40 dark:shadow-[0_0_16px_rgba(185,151,255,0.2)] font-semibold'
+                        : 'border-transparent text-ash-veil hover:text-bone-white hover:bg-shadow-plum/80 hover:border-lavender-spark/30 hover:shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:hover:shadow-[0_0_15px_rgba(185,151,255,0.2)]'
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -70,7 +77,11 @@ export function Header() {
             {isConnected && address ? (
               <AccountMenu />
             ) : (
-              <Button onClick={open} size="sm" className="gap-1.5 shadow-glow-green/30">
+              <Button
+                onClick={open}
+                size="sm"
+                className="gap-1.5 shadow-glow-green/30 hover:shadow-[0_0_16px_rgba(0,135,68,0.35)] dark:hover:shadow-[0_0_20px_rgba(0,245,117,0.5)]"
+              >
                 <Wallet className="w-3.5 h-3.5" />
                 <span className="text-xs font-semibold">Connect</span>
                 <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -79,7 +90,7 @@ export function Header() {
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 text-ash-veil hover:text-bone-white transition-colors rounded-xl hover:bg-shadow-plum"
+              className="md:hidden p-2 text-ash-veil hover:text-bone-white transition-all duration-200 rounded-xl hover:bg-shadow-plum hover:border-lavender-spark/40 hover:shadow-[0_0_12px_rgba(124,58,237,0.2)] dark:hover:shadow-[0_0_15px_rgba(185,151,255,0.2)] border border-transparent"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -91,15 +102,22 @@ export function Header() {
           {mobileMenuOpen && (
             <nav className="absolute top-full left-0 right-0 mt-2 bg-shadow-plum border border-fog-line/15 rounded-2xl shadow-screenshot-frame p-3 flex flex-col gap-1.5 md:hidden animate-fade-in-scale z-50">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive =
+                  item.href === '/'
+                    ? pathname === '/'
+                    : item.href === '/certificates'
+                    ? pathname === '/certificates' ||
+                      (pathname.startsWith('/certificates/') && !pathname.startsWith('/certificates/issue'))
+                    : pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`block px-3.5 py-2.5 text-sm rounded-xl transition-colors font-medium ${isActive
-                        ? 'text-bone-white bg-midnight-plum border border-fog-line/15'
-                        : 'text-ash-veil hover:text-bone-white hover:bg-midnight-plum/50'
-                      }`}
+                    className={`block px-3.5 py-2.5 text-sm rounded-xl transition-all duration-200 font-medium border ${
+                      isActive
+                        ? 'text-lavender-spark bg-lavender-spark/10 border-lavender-spark/30 shadow-[0_0_12px_rgba(124,58,237,0.15)] font-semibold dark:bg-midnight-plum dark:text-lavender-spark dark:border-lavender-spark/40'
+                        : 'border-transparent text-ash-veil hover:text-bone-white hover:bg-midnight-plum/50 hover:border-lavender-spark/20 hover:shadow-[0_0_10px_rgba(124,58,237,0.15)]'
+                    }`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.label}
@@ -117,4 +135,3 @@ export function Header() {
     </div>
   );
 }
-
