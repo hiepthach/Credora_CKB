@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import React from 'react';
-import { Card, Badge, Button } from '@/components/ui';
+import { Card, Badge, Button, ConstellationBackground } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
 import { Wallet, Shield, Award, Users, FileText, Zap, ArrowRight, CheckCircle2, Lock, Sparkles, Terminal, Copy } from 'lucide-react';
 
@@ -86,7 +86,10 @@ const architectureSteps = [
 
 export default function Home() {
   return (
-    <div className="space-y-28 py-6 sm:py-10">
+    <div className="relative space-y-28 py-6 sm:py-10">
+      {/* Interactive Constellation & Starfield Background */}
+      <ConstellationBackground />
+
       {/* =========================================================
           HERO SECTION — Doppler Midnight Vault & Aurora Glow
           ========================================================= */}

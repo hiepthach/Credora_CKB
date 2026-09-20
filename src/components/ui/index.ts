@@ -8,3 +8,4 @@ export { Modal } from './Modal';
 export { CredoraLogo } from './CredoraLogo';
 export { Alert } from './Alert';
 export type { AlertProps, AlertVariant } from './Alert';
+export { ConstellationBackground } from './ConstellationBackground';
