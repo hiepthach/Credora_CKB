@@ -14,19 +14,23 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 const variantStyles: Record<BadgeVariant, string> = {
   default: 'bg-midnight text-ash border-dusk',
   neutral: 'bg-midnight text-ash border-dusk',
-  success: 'bg-emerald-950 text-emerald-400 border-emerald-800',
-  warning: 'bg-amber-950 text-amber-400 border-amber-800',
-  danger: 'bg-red-950 text-red-400 border-red-800',
-  lavender: 'bg-deep-indigo text-lavender border-iris shadow-glow-violet',
+  success:
+    'bg-emerald-500/10 text-emerald-800 border-emerald-500/25 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800',
+  warning:
+    'bg-amber-500/10 text-amber-800 border-amber-500/25 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800',
+  danger:
+    'bg-red-500/10 text-red-800 border-red-500/25 dark:bg-red-950 dark:text-red-400 dark:border-red-800',
+  lavender:
+    'bg-lavender-spark/10 text-lavender-spark border-lavender-spark/25 shadow-glow-violet/30 dark:bg-deep-indigo dark:text-lavender dark:border-iris dark:shadow-glow-violet',
 };
 
 const pulseColors: Record<BadgeVariant, string> = {
   default: 'bg-ash',
   neutral: 'bg-ash',
-  success: 'bg-emerald-400',
-  warning: 'bg-amber-400',
-  danger: 'bg-red-400',
-  lavender: 'bg-lavender',
+  success: 'bg-emerald-600 dark:bg-emerald-400',
+  warning: 'bg-amber-600 dark:bg-amber-400',
+  danger: 'bg-red-600 dark:bg-red-400',
+  lavender: 'bg-lavender-spark dark:bg-lavender',
 };
 
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(

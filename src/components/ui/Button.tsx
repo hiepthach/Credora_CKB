@@ -14,7 +14,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles = {
   primary:
-    'bg-signal-green bg-iris text-black font-medium hover:bg-signal-green/90 hover:shadow-glow-green border border-transparent active:scale-[0.98]',
+    'bg-signal-green bg-iris text-white dark:text-black font-medium hover:bg-signal-green/90 hover:shadow-glow-green border border-transparent active:scale-[0.98]',
   secondary:
     'bg-shadow-plum bg-deep-indigo hover:bg-[#383042] text-bone-white text-lilac-white border border-fog-line/15 border-dusk/30 hover:border-fog-line/30 active:scale-[0.98]',
   danger:

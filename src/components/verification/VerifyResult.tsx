@@ -88,12 +88,12 @@ function ValidResult({
 
 function ExpiredResult({ result }: { result: VerificationResult }) {
   return (
-    <Card variant="default" padding="xl" className="border-yellow-500/40 animate-fade-in-scale">
+    <Card variant="default" padding="xl" className="border-amber-500/30 dark:border-yellow-500/40 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-yellow-500/40 rounded-2xl flex items-center justify-center text-yellow-400 shadow-glow-sm animate-float">
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-amber-500/30 dark:border-yellow-500/40 rounded-2xl flex items-center justify-center text-amber-600 dark:text-yellow-400 shadow-glow-sm animate-float">
           <AlertTriangle className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-bold text-yellow-400 mb-1.5 tracking-tight">
+        <h2 className="text-xl font-bold text-amber-800 dark:text-yellow-400 mb-1.5 tracking-tight">
           Expired Credential
         </h2>
         <p className="text-ash-veil text-xs max-w-sm mx-auto">
@@ -115,7 +115,7 @@ function ExpiredResult({ result }: { result: VerificationResult }) {
         {result.certificate.expirationDate && (
           <div className="flex justify-between items-center p-2.5 bg-midnight-plum rounded-xl border border-fog-line/10">
             <span className="text-mid-ash uppercase tracking-wider font-semibold">Expired On</span>
-            <span className="text-yellow-400">
+            <span className="text-amber-700 dark:text-yellow-400 font-medium">
               {formatDate(result.certificate.expirationDate)}
             </span>
           </div>
@@ -131,12 +131,12 @@ function ExpiredResult({ result }: { result: VerificationResult }) {
 
 function InvalidResult({ result }: { result: VerificationResult }) {
   return (
-    <Card variant="default" padding="xl" className="border-red-500/40 animate-fade-in-scale">
+    <Card variant="default" padding="xl" className="border-red-500/30 dark:border-red-500/40 animate-fade-in-scale">
       <div className="text-center py-6">
-        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-red-500/40 rounded-2xl flex items-center justify-center text-red-400 shadow-glow-sm animate-float">
+        <div className="w-16 h-16 mx-auto mb-4 bg-midnight-plum border border-red-500/30 dark:border-red-500/40 rounded-2xl flex items-center justify-center text-red-600 dark:text-red-400 shadow-glow-sm animate-float">
           <XCircle className="w-9 h-9" />
         </div>
-        <h2 className="text-xl font-bold text-red-400 mb-1.5 tracking-tight">
+        <h2 className="text-xl font-bold text-red-700 dark:text-red-400 mb-1.5 tracking-tight">
           Invalid Credential
         </h2>
         <p className="text-ash-veil text-xs max-w-sm mx-auto">
@@ -147,7 +147,7 @@ function InvalidResult({ result }: { result: VerificationResult }) {
       {result.errors && result.errors.length > 0 && (
         <div className="mt-4 pt-5 border-t border-fog-line/10">
           <h3 className="text-xs font-semibold text-mid-ash uppercase tracking-wider mb-2">Errors</h3>
-          <ul className="space-y-1 text-xs text-red-400">
+          <ul className="space-y-1 text-xs text-red-700 dark:text-red-400">
             {result.errors.map((error, index) => (
               <li key={index}>
                 • {error}

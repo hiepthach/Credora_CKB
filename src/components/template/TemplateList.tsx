@@ -60,12 +60,12 @@ export const CERTIFICATE_PRESETS: CertificatePreset[] = [
 ];
 
 const THEME_BADGE_CLASSES: Record<CertificateTheme, string> = {
-  gold: 'bg-yellow-950/60 text-yellow-400 border-yellow-700/50',
-  blue: 'bg-blue-950/60 text-blue-400 border-blue-700/50',
-  purple: 'bg-purple-950/60 text-purple-400 border-purple-700/50',
-  green: 'bg-emerald-950/60 text-emerald-400 border-emerald-700/50',
-  red: 'bg-red-950/60 text-red-400 border-red-700/50',
-  custom: 'bg-slate-900 text-slate-400 border-slate-700',
+  gold: 'bg-amber-500/10 text-amber-800 border-amber-500/25 dark:bg-yellow-950/60 dark:text-yellow-400 dark:border-yellow-700/50',
+  blue: 'bg-blue-500/10 text-blue-700 border-blue-500/25 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-700/50',
+  purple: 'bg-purple-500/10 text-purple-700 border-purple-500/25 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-700/50',
+  green: 'bg-emerald-500/10 text-emerald-800 border-emerald-500/25 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-700/50',
+  red: 'bg-red-500/10 text-red-800 border-red-500/25 dark:bg-red-950/60 dark:text-red-400 dark:border-red-700/50',
+  custom: 'bg-slate-500/10 text-slate-700 border-slate-500/25 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700',
 };
 
 export interface TemplateListProps {
