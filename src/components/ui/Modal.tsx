@@ -56,7 +56,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-midnight-plum/80 backdrop-blur-sm transition-opacity duration-300 z-0 no-print"
+        className="fixed inset-0 bg-black/50 dark:bg-midnight-plum/80 backdrop-blur-sm transition-opacity duration-300 z-0 no-print"
         onClick={onClose}
         aria-hidden="true"
       />

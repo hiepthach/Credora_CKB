@@ -20,14 +20,14 @@ export interface AlertProps {
 
 const variantStyles: Record<AlertVariant, { container: string; iconColor: string; titleColor: string }> = {
   error: {
-    container: 'bg-red-950/40 border-red-800/50 text-red-300',
-    iconColor: 'text-red-400',
-    titleColor: 'text-red-200',
+    container: 'bg-red-500/10 dark:bg-red-950/40 border-red-500/30 dark:border-red-800/50 text-red-700 dark:text-red-300',
+    iconColor: 'text-red-600 dark:text-red-400',
+    titleColor: 'text-red-800 dark:text-red-200',
   },
   warning: {
-    container: 'bg-yellow-950/40 border-yellow-700/50 text-yellow-300',
-    iconColor: 'text-yellow-400',
-    titleColor: 'text-yellow-200',
+    container: 'bg-yellow-500/10 dark:bg-yellow-950/40 border-yellow-500/30 dark:border-yellow-700/50 text-yellow-800 dark:text-yellow-300',
+    iconColor: 'text-yellow-600 dark:text-yellow-400',
+    titleColor: 'text-yellow-900 dark:text-yellow-200',
   },
   info: {
     container: 'bg-midnight-plum/80 border-lavender-spark/30 text-mid-ash',
@@ -35,9 +35,9 @@ const variantStyles: Record<AlertVariant, { container: string; iconColor: string
     titleColor: 'text-bone-white',
   },
   success: {
-    container: 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300',
-    iconColor: 'text-emerald-400',
-    titleColor: 'text-emerald-200',
+    container: 'bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/30 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    titleColor: 'text-emerald-900 dark:text-emerald-200',
   },
 };
 

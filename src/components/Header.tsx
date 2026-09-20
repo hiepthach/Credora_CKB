@@ -5,20 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useWallet } from '@/hooks/useWallet';
 import { Button } from '@/components/ui';
 import { CredoraLogo } from '@/components/ui/CredoraLogo';
-import { Wallet, LogOut, Menu, X, ExternalLink, Copy, Check, Sparkles } from 'lucide-react';
+import { Wallet, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { NetworkSelector } from './wallet/NetworkSelector';
-
-function truncateAddress(address: string): string {
-  if (address.length <= 10) return address;
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
+import { AccountMenu } from './wallet/AccountMenu';
+import { ThemeToggle } from './theme/ThemeToggle';
 
 export function Header() {
   const pathname = usePathname();
-  const { open, disconnect, address, isConnected } = useWallet();
+  const { open, isConnected, address } = useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const navItems = [
     { href: '/', label: 'Home' },
@@ -27,24 +23,6 @@ export function Header() {
     { href: '/certificates', label: 'My Certificates' },
     { href: '/verify', label: 'Verify' },
   ];
-
-  const handleCopyAddress = async () => {
-    if (address) {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const getExplorerLink = () => {
-    const explorers: Record<string, string | null> = {
-      testnet: 'https://testnet.explorer.nervos.org',
-      mainnet: 'https://explorer.nervos.org',
-    };
-    return explorers[process.env.NEXT_PUBLIC_NETWORK || 'testnet'] || null;
-  };
-
-  const explorerUrl = getExplorerLink();
 
   return (
     <div className="sticky top-0 z-40 w-full pt-3 px-4 sm:px-6">
@@ -80,57 +58,17 @@ export function Header() {
             </nav>
           </div>
 
-          {/* Right: Network Selector + Wallet Cluster */}
+          {/* Right: Theme Toggle + Network Selector + Wallet Account Dropdown */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Network Selector */}
             <NetworkSelector />
 
-            {/* Wallet Connection */}
-            {isConnected ? (
-              <div className="flex items-center gap-2">
-                {/* Address with copy feedback */}
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <button
-                    onClick={handleCopyAddress}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-shadow-plum rounded-xl border border-fog-line/15 hover:border-lavender-spark/40 transition-all duration-200 group"
-                    title="Copy address"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-signal-green" />
-                    <span className="text-xs font-mono text-bone-white">
-                      {truncateAddress(address || '')}
-                    </span>
-                    {copied ? (
-                      <Check className="w-3.5 h-3.5 text-signal-green animate-fade-in" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5 text-mid-ash group-hover:text-bone-white transition-colors" />
-                    )}
-                  </button>
-
-                  {/* Explorer link */}
-                  {explorerUrl && (
-                    <a
-                      href={`${explorerUrl}/address/${address}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-shadow-plum rounded-xl border border-fog-line/15 hover:border-lavender-spark/40 transition-colors text-mid-ash hover:text-bone-white"
-                      title="View on CKB Explorer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                </div>
-
-                {/* Disconnect button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={disconnect}
-                  className="gap-1.5 border border-fog-line/15"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-xs">Disconnect</span>
-                </Button>
-              </div>
+            {/* Wallet Connection / Account Menu */}
+            {isConnected && address ? (
+              <AccountMenu />
             ) : (
               <Button onClick={open} size="sm" className="gap-1.5 shadow-glow-green/30">
                 <Wallet className="w-3.5 h-3.5" />
@@ -168,6 +106,10 @@ export function Header() {
                   </Link>
                 );
               })}
+              <div className="pt-2 mt-1 border-t border-fog-line/10 flex items-center justify-between px-3.5 py-1.5">
+                <span className="text-xs text-ash-veil font-medium">Theme</span>
+                <ThemeToggle />
+              </div>
             </nav>
           )}
         </header>

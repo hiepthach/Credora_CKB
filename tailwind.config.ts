@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,63 +10,63 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Doppler Design System Tokens (from DESIGN.md)
-        'midnight-plum': '#1c1624',
-        'shadow-plum': '#2d2734',
-        'bone-white': '#f1f0ec',
-        'fog-line': '#e5e7eb',
-        'ash-veil': '#d0c9c4',
-        'mid-ash': '#a5a2a5',
-        'iron-edge': '#55505b',
-        'lavender-spark': '#b997ff',
-        'signal-green': '#00f575',
-        'neon-violet': '#6b13f5',
-        'ember-orange': '#ff5632',
-        'plasma-pink': '#ff9efa',
+        // Doppler Design System Tokens (from DESIGN.md) — dynamically mapped for Light & Dark modes
+        'midnight-plum': 'rgb(var(--color-midnight-plum) / <alpha-value>)',
+        'shadow-plum': 'rgb(var(--color-shadow-plum) / <alpha-value>)',
+        'bone-white': 'rgb(var(--color-bone-white) / <alpha-value>)',
+        'fog-line': 'rgb(var(--color-fog-line) / <alpha-value>)',
+        'ash-veil': 'rgb(var(--color-ash-veil) / <alpha-value>)',
+        'mid-ash': 'rgb(var(--color-mid-ash) / <alpha-value>)',
+        'iron-edge': 'rgb(var(--color-iron-edge) / <alpha-value>)',
+        'lavender-spark': 'rgb(var(--color-lavender-spark) / <alpha-value>)',
+        'signal-green': 'rgb(var(--color-signal-green) / <alpha-value>)',
+        'neon-violet': 'rgb(var(--color-neon-violet) / <alpha-value>)',
+        'ember-orange': 'rgb(var(--color-ember-orange) / <alpha-value>)',
+        'plasma-pink': 'rgb(var(--color-plasma-pink) / <alpha-value>)',
 
         // Semantic Aliases mapped to Doppler System
         void: {
-          DEFAULT: '#1c1624',
-          canvas: '#1c1624',
+          DEFAULT: 'rgb(var(--color-midnight-plum) / <alpha-value>)',
+          canvas: 'rgb(var(--color-midnight-plum) / <alpha-value>)',
         },
         midnight: {
-          DEFAULT: '#2d2734',
-          surface: '#2d2734',
+          DEFAULT: 'rgb(var(--color-shadow-plum) / <alpha-value>)',
+          surface: 'rgb(var(--color-shadow-plum) / <alpha-value>)',
         },
         deep: {
-          indigo: '#3a3340',
+          indigo: 'rgb(var(--color-deep-indigo) / <alpha-value>)',
         },
         lilac: {
-          white: '#f1f0ec',
-          DEFAULT: '#f1f0ec',
+          white: 'rgb(var(--color-bone-white) / <alpha-value>)',
+          DEFAULT: 'rgb(var(--color-bone-white) / <alpha-value>)',
         },
-        ash: '#d0c9c4',
-        fog: '#a5a2a5',
-        steel: '#55505b',
-        mercury: '#e5e7eb',
-        dusk: '#55505b',
+        ash: 'rgb(var(--color-ash-veil) / <alpha-value>)',
+        fog: 'rgb(var(--color-mid-ash) / <alpha-value>)',
+        steel: 'rgb(var(--color-iron-edge) / <alpha-value>)',
+        mercury: 'rgb(var(--color-fog-line) / <alpha-value>)',
+        dusk: 'rgb(var(--color-iron-edge) / <alpha-value>)',
         lavender: {
-          DEFAULT: '#b997ff',
-          accent: '#b997ff',
+          DEFAULT: 'rgb(var(--color-lavender-spark) / <alpha-value>)',
+          accent: 'rgb(var(--color-lavender-spark) / <alpha-value>)',
         },
-        iris: '#00f575', // Primary 'go' CTA action maps to signal green
+        iris: 'rgb(var(--color-signal-green) / <alpha-value>)', // Primary 'go' CTA action maps to signal green
 
         // Semantic surface & text aliases
         surface: {
-          void: '#1c1624',
-          card: '#2d2734',
-          elevated: '#3a3340',
+          void: 'rgb(var(--color-midnight-plum) / <alpha-value>)',
+          card: 'rgb(var(--color-shadow-plum) / <alpha-value>)',
+          elevated: 'rgb(var(--color-deep-indigo) / <alpha-value>)',
         },
         text: {
-          primary: '#f1f0ec',
-          secondary: '#d0c9c4',
-          tertiary: '#a5a2a5',
-          muted: '#55505b',
+          primary: 'rgb(var(--color-bone-white) / <alpha-value>)',
+          secondary: 'rgb(var(--color-ash-veil) / <alpha-value>)',
+          tertiary: 'rgb(var(--color-mid-ash) / <alpha-value>)',
+          muted: 'rgb(var(--color-iron-edge) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#b997ff',
-          signal: '#00f575',
-          iris: '#6b13f5',
+          DEFAULT: 'rgb(var(--color-lavender-spark) / <alpha-value>)',
+          signal: 'rgb(var(--color-signal-green) / <alpha-value>)',
+          iris: 'rgb(var(--color-neon-violet) / <alpha-value>)',
         },
       },
       fontFamily: {
@@ -91,12 +92,12 @@ const config: Config = {
         lg: '8px',
       },
       boxShadow: {
-        'glow-sm': '0 0 16px rgba(185, 151, 255, 0.04)',
-        'glow-md': '0 0 24px rgba(185, 151, 255, 0.06)',
-        'glow-lg': '0 0 32px rgba(185, 151, 255, 0.08)',
-        'glow-violet': '0 0 60px rgba(185, 151, 255, 0.15)',
-        'glow-green': '0 0 24px rgba(0, 245, 117, 0.35)',
-        'screenshot-frame': '0 0 60px rgba(185, 151, 255, 0.15)',
+        'glow-sm': 'var(--shadow-glow-sm)',
+        'glow-md': 'var(--shadow-glow-md)',
+        'glow-lg': 'var(--shadow-glow-lg)',
+        'glow-violet': 'var(--shadow-glow-violet)',
+        'glow-green': 'var(--shadow-glow-green)',
+        'screenshot-frame': 'var(--shadow-screenshot-frame)',
       },
       backgroundImage: {
         'doppler-gradient': 'linear-gradient(91deg, #855aff 14.92%, #ff5632 90.53%)',

@@ -4,37 +4,48 @@
 
 /* ============================================
    Doppler Design System — CSS Custom Properties
-   Theme: violet-lit vault at midnight
+   Theme: violet-lit vault at midnight (dark)
+          crisp, radiant daylight vault (light)
    ============================================ */
 
 :root {
-  /* Doppler Colors */
-  --color-midnight-plum: #1c1624;
-  --color-shadow-plum: #2d2734;
-  --color-bone-white: #f1f0ec;
-  --color-fog-line: #e5e7eb;
-  --color-ash-veil: #d0c9c4;
-  --color-mid-ash: #a5a2a5;
-  --color-iron-edge: #55505b;
-  --color-lavender-spark: #b997ff;
-  --color-signal-green: #00f575;
-  --color-neon-violet: #6b13f5;
-  --color-ember-orange: #ff5632;
-  --color-plasma-pink: #ff9efa;
+  /* Doppler Colors (Light Mode) */
+  --color-midnight-plum: 248 249 252;   /* Canvas background: #f8f9fc */
+  --color-shadow-plum: 255 255 255;     /* Card surface: #ffffff */
+  --color-deep-indigo: 241 243 249;     /* Elevated surface: #f1f3f9 */
+  --color-bone-white: 26 22 38;         /* Primary text: #1a1626 */
+  --color-fog-line: 28 22 36;           /* Border lines / hairline: #1c1624 */
+  --color-ash-veil: 85 79 96;           /* Secondary text: #554f60 */
+  --color-mid-ash: 130 124 145;         /* Muted text / placeholder: #827c91 */
+  --color-iron-edge: 226 224 232;       /* Structural borders: #e2e0e8 */
+  --color-lavender-spark: 124 58 237;   /* Violet brand accent: #7c3aed */
+  --color-signal-green: 0 135 68;       /* High-contrast emerald: #008744 */
+  --color-neon-violet: 107 19 245;      /* Neon violet: #6b13f5 */
+  --color-ember-orange: 234 88 12;      /* Ember orange: #ea580c */
+  --color-plasma-pink: 217 70 239;      /* Plasma pink: #d946ef */
+
+  /* Shadows (Light Mode) */
+  --shadow-glow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-glow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-glow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-glow-violet: 0 10px 25px -5px rgba(124, 58, 237, 0.12), 0 8px 10px -6px rgba(124, 58, 237, 0.08);
+  --shadow-glow-green: 0 10px 25px -5px rgba(0, 135, 68, 0.2);
+  --shadow-screenshot-frame: 0 20px 40px -15px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --aurora-gradient-bg: radial-gradient(ellipse 65% 55% at 50% 45%, rgba(124, 58, 237, 0.08) 0%, rgba(217, 70, 239, 0.04) 40%, transparent 75%);
 
   /* Semantic Aliases mapped to Doppler */
-  --void-canvas: var(--color-midnight-plum);
-  --midnight-surface: var(--color-shadow-plum);
-  --deep-indigo: #3a3340;
-  --lilac-white: var(--color-bone-white);
+  --void-canvas: rgb(var(--color-midnight-plum));
+  --midnight-surface: rgb(var(--color-shadow-plum));
+  --deep-indigo: rgb(var(--color-deep-indigo));
+  --lilac-white: rgb(var(--color-bone-white));
   --pearl: #ffffff;
-  --ash: var(--color-ash-veil);
-  --fog: var(--color-mid-ash);
-  --steel: var(--color-iron-edge);
-  --mercury: var(--color-fog-line);
-  --dusk: var(--color-iron-edge);
-  --lavender: var(--color-lavender-spark);
-  --iris: var(--color-signal-green);
+  --ash: rgb(var(--color-ash-veil));
+  --fog: rgb(var(--color-mid-ash));
+  --steel: rgb(var(--color-iron-edge));
+  --mercury: rgb(var(--color-fog-line));
+  --dusk: rgb(var(--color-iron-edge));
+  --lavender: rgb(var(--color-lavender-spark));
+  --iris: rgb(var(--color-signal-green));
 
   /* Gradients */
   --doppler-gradient: linear-gradient(91deg, #855aff 14.92%, #ff5632 90.53%);
@@ -43,13 +54,6 @@
   --cosmic-end: #ff5632;
   --aurora-mid: #b997ff;
 
-  /* Elevation: Doppler Surface Steps & Ambient Radiance */
-  --glow-sm: 0 0 16px rgba(185, 151, 255, 0.04);
-  --glow-md: 0 0 24px rgba(185, 151, 255, 0.06);
-  --glow-lg: 0 0 32px rgba(185, 151, 255, 0.08);
-  --glow-violet: 0 0 60px rgba(185, 151, 255, 0.15);
-  --glow-green: 0 0 24px rgba(0, 245, 117, 0.35);
-
   /* Border radius */
   --radius-btn: 12px;
   --radius-card: 20px;
@@ -57,14 +61,41 @@
   --radius-nav: 9999px;
 }
 
+.dark {
+  /* Doppler Colors (Dark Mode — violet-lit vault at midnight) */
+  --color-midnight-plum: 28 22 36;      /* #1c1624 */
+  --color-shadow-plum: 45 39 52;        /* #2d2734 */
+  --color-deep-indigo: 58 51 64;        /* #3a3340 */
+  --color-bone-white: 241 240 236;      /* #f1f0ec */
+  --color-fog-line: 229 231 235;        /* #e5e7eb */
+  --color-ash-veil: 208 201 196;        /* #d0c9c4 */
+  --color-mid-ash: 165 162 165;         /* #a5a2a5 */
+  --color-iron-edge: 85 80 91;          /* #55505b */
+  --color-lavender-spark: 185 151 255;  /* #b997ff */
+  --color-signal-green: 0 245 117;      /* #00f575 */
+  --color-neon-violet: 107 19 245;      /* #6b13f5 */
+  --color-ember-orange: 255 86 50;      /* #ff5632 */
+  --color-plasma-pink: 255 158 250;     /* #ff9efa */
+
+  /* Shadows (Dark Mode) */
+  --shadow-glow-sm: 0 0 16px rgba(185, 151, 255, 0.04);
+  --shadow-glow-md: 0 0 24px rgba(185, 151, 255, 0.06);
+  --shadow-glow-lg: 0 0 32px rgba(185, 151, 255, 0.08);
+  --shadow-glow-violet: 0 0 60px rgba(185, 151, 255, 0.15);
+  --shadow-glow-green: 0 0 24px rgba(0, 245, 117, 0.35);
+  --shadow-screenshot-frame: 0 0 60px rgba(185, 151, 255, 0.15);
+  --aurora-gradient-bg: radial-gradient(ellipse 65% 55% at 50% 45%, rgba(107, 19, 245, 0.28) 0%, rgba(255, 158, 250, 0.12) 40%, transparent 75%);
+}
+
 body {
-  color: var(--color-bone-white);
-  background-color: var(--color-midnight-plum);
+  color: rgb(var(--color-bone-white));
+  background-color: rgb(var(--color-midnight-plum));
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom scrollbar */
@@ -74,28 +105,28 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-midnight-plum);
+  background: rgb(var(--color-midnight-plum));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-iron-edge);
+  background: rgb(var(--color-iron-edge));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ash-veil);
+  background: rgb(var(--color-ash-veil));
 }
 
 /* Focus styles — lavender accent ring */
 *:focus-visible {
-  outline: 2px solid var(--color-lavender-spark);
+  outline: 2px solid rgb(var(--color-lavender-spark));
   outline-offset: 2px;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(185, 151, 255, 0.28);
-  color: var(--color-bone-white);
+  background: rgba(var(--color-lavender-spark) / 0.28);
+  color: rgb(var(--color-bone-white));
 }
 
 /* ============================================
@@ -104,40 +135,40 @@ body {
 
 /* Surfaces */
 .bg-void {
-  background-color: var(--color-midnight-plum);
+  background-color: rgb(var(--color-midnight-plum));
 }
 
 .bg-midnight {
-  background-color: var(--color-shadow-plum);
+  background-color: rgb(var(--color-shadow-plum));
 }
 
 .bg-deep-indigo {
-  background-color: #3a3340;
+  background-color: rgb(var(--color-deep-indigo));
 }
 
 /* Text colors */
 .text-lilac {
-  color: var(--color-bone-white);
+  color: rgb(var(--color-bone-white));
 }
 
 .text-ash {
-  color: var(--color-ash-veil);
+  color: rgb(var(--color-ash-veil));
 }
 
 .text-fog {
-  color: var(--color-mid-ash);
+  color: rgb(var(--color-mid-ash));
 }
 
 .text-steel {
-  color: var(--color-iron-edge);
+  color: rgb(var(--color-iron-edge));
 }
 
 .text-lavender {
-  color: var(--color-lavender-spark);
+  color: rgb(var(--color-lavender-spark));
 }
 
 .text-signal-green {
-  color: var(--color-signal-green);
+  color: rgb(var(--color-signal-green));
 }
 
 /* Doppler Signature Gradient Highlight */
@@ -153,29 +184,33 @@ body {
 /* Aurora divider */
 .aurora-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(229, 231, 235, 0.2) 30%, var(--color-lavender-spark) 50%, rgba(229, 231, 235, 0.2) 70%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(var(--color-fog-line) / 0.2) 30%, rgb(var(--color-lavender-spark)) 50%, rgba(var(--color-fog-line) / 0.2) 70%, transparent 100%);
   opacity: 0.6;
 }
 
 /* Doppler Vault Frame */
 .doppler-vault-frame {
-  background: #2d2734;
-  border: 1px solid rgba(229, 231, 235, 0.15);
+  background: rgb(var(--color-shadow-plum));
+  border: 1px solid rgba(var(--color-fog-line) / 0.15);
   border-radius: 20px;
-  box-shadow: 0 0 60px rgba(185, 151, 255, 0.15);
+  box-shadow: var(--shadow-screenshot-frame);
 }
 
 /* Aurora Backdrop Atmosphere */
 .aurora-backdrop {
   position: absolute;
   pointer-events: none;
-  background: radial-gradient(ellipse 65% 55% at 50% 45%, rgba(107, 19, 245, 0.28) 0%, rgba(255, 158, 250, 0.12) 40%, transparent 75%);
+  background: var(--aurora-gradient-bg);
   filter: blur(50px);
   border-radius: 9999px;
 }
 
 /* Doppler Star Field */
 .star-field {
+  display: none;
+}
+.dark .star-field {
+  display: block;
   background-image:
     radial-gradient(1px 1px at 15% 25%, rgba(241, 240, 236, 0.12) 0%, transparent 100%),
     radial-gradient(1px 1px at 45% 65%, rgba(241, 240, 236, 0.08) 0%, transparent 100%),
