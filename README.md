@@ -147,8 +147,8 @@ graph TD
 
 | Tier | Protocol / Standard | Status | Capability |
 |---|---|---|---|
-| **Phase 1: Identity & Resolution** | `@ckb-ccc/did-ckb` | **LIVE (Testnet)** | Resolve `did:ckb:...` to active CKB lock; store DID in `credentialSubject.id` for W3C compliance. |
-| **Phase 2: Dual-Output Attestation** | Vellum Claim Cell ([PR #31](https://github.com/truthixify/vellum/pull/31)) | **Proposed / In Progress** | Mint atomic Spore DOB + Vellum Claim Cell; immune to wallet lock rotations; powers builder score. |
+| **Phase 1: Identity & Resolution** | `@ckb-ccc/did-ckb` | **LIVE (Testnet & Mainnet)** | Resolve `did:ckb:...` to active CKB lock; store DID in `credentialSubject.id` for W3C compliance. |
+| **Phase 2: Dual-Output Attestation** | Vellum Claim Cell ([M1 Complete](https://talk.nervos.org/t/dis-vellum-reputation-extension-on-did-ckb/10613/9)) | **Proposed / Ready to Implement** | Mint atomic Spore DOB + Vellum Claim Cell; immune to wallet lock rotations; powers builder score via `@usevellum/sdk` v0.1.0. |
 
 ### Phase 1 (Current): `did:ckb` Recipient Resolution
 Credora natively supports issuing course certificates directly to `did:ckb` identifiers:
@@ -157,12 +157,13 @@ Credora natively supports issuing course certificates directly to `did:ckb` iden
 3. The issued Spore DOB embeds the DID identifier into the W3C Verifiable Credential payload.
 4. Certificates display a verified DID badge linking directly to the recipient's profile on [Vellum](https://usevellum.xyz/).
 
-### Phase 2 (Upcoming Concept): Dual-Output Transaction Flow
+### Phase 2 (Upcoming): Dual-Output Transaction Flow
 * **The Context:** When a user rotates their wallet key (e.g. upgrades to JoyID Passkey), a standard Spore DOB remains locked under the previous key. Furthermore, Vellum cannot index arbitrary Spore JSON schemas across different dApps.
 * **The Solution:** Credora explores a dual-output issuance flow — in a single transaction, the issuer creates:
   - **Output 0 (Spore DOB):** The rich, visual, self-contained educational diploma.
   - **Output 1 (Vellum Claim Cell):** A compact attestation referencing the `spore_id` and signed by the Credora Issuer.
-* **Lock Rotation Solved:** Claim Cells delegate spending authorization to the recipient's DID Cell. When the recipient updates their wallet on Vellum, their Claim Cell automatically tracks the new key.
+* **Lock Rotation Solved:** Claim Cells delegate spending authorization to the recipient's DID Cell via the DID Lock script. When the recipient updates their wallet on Vellum, their Claim Cell automatically tracks the new key.
+* **SDK Ready:** Vellum M1 ships `@usevellum/sdk` v0.1.0 for Claim Cell operations.
 * **Full Specification:** See [Vellum Integration Design Concept](docs/Design_spec/09_Vellum_Integration_Design.md).
 
 ## CKB Cell Capacity & State Rent Economics
