@@ -207,3 +207,153 @@ describe('CertificateForm Style Selection & Color Picker', () => {
     expect(recipientInput.value).toBe('ckt1q_connected_user_wallet_address');
   });
 });
+
+describe('CertificateForm Vellum Claim Cell Toggle', () => {
+  it('does not render Vellum toggle when recipient is a standard CKB address', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByLabelText(/Add to Vellum \(Claim Cell\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\+350 CKB/i)).not.toBeInTheDocument();
+  });
+
+  it('renders Vellum toggle showing "+350 CKB" when recipient is a DID', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i) as HTMLInputElement;
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox.checked).toBe(false);
+    expect(screen.getByText(/\+350 CKB/i)).toBeInTheDocument();
+  });
+
+  it('renders Vellum toggle when user types a DID into the recipient input', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByLabelText(/Add to Vellum/i)).not.toBeInTheDocument();
+
+    const recipientInput = screen.getByPlaceholderText(/ckt1qzda0cr08m85hc8j/i);
+    fireEvent.change(recipientInput, {
+      target: { value: 'did:ckb:0xabcdef1234567890' },
+    });
+
+    expect(screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i)).toBeInTheDocument();
+  });
+
+  it('toggles withVellumClaim and includes it on submit', () => {
+    const handleSubmit = vi.fn();
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={handleSubmit}
+      />
+    );
+
+    // Fill required fields
+    fireEvent.change(screen.getByPlaceholderText(/Student name/i), {
+      target: { value: 'Alice Nakamoto' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Course or program/i), {
+      target: { value: 'Nervos Architecture' },
+    });
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+
+    // Toggle ON
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+
+    // Submit with toggle ON
+    const submitBtn = screen.getByRole('button', { name: /Mint Certificate|Mint Spore/i });
+    fireEvent.click(submitBtn);
+
+    expect(handleSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientName: 'Alice Nakamoto',
+        courseName: 'Nervos Architecture',
+        withVellumClaim: true,
+      })
+    );
+
+    // Toggle OFF
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+
+    // Submit with toggle OFF
+    fireEvent.click(submitBtn);
+    expect(handleSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        recipientName: 'Alice Nakamoto',
+        courseName: 'Nervos Architecture',
+        withVellumClaim: false,
+      })
+    );
+  });
+
+  it('displays "+350 CKB" in the capacity preview area when checked', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    // Initially preview doesn't show Claim Cell info
+    expect(screen.queryByText(/Claim Cell:\s*\+350 CKB/i)).not.toBeInTheDocument();
+
+    // Check Vellum toggle
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    // Now capacity preview displays Claim Cell info
+    expect(screen.getByText(/Claim Cell:\s*\+350 CKB/i)).toBeInTheDocument();
+  });
+
+  it('notifies onChange with withVellumClaim when toggled', () => {
+    const handleChange = vi.fn();
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+        onChange={handleChange}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        withVellumClaim: true,
+      })
+    );
+  });
+});
+

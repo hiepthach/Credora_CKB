@@ -178,6 +178,8 @@ function IssuePageContent() {
           },
         },
         expirationDate: data.expirationDate,
+        withVellumClaim: data.withVellumClaim,
+        recipientDid: data.recipientAddress.startsWith('did:ckb:') ? data.recipientAddress : undefined,
       });
     },
     onSuccess: async (data) => {

@@ -22,6 +22,7 @@ export interface CertificateData {
   theme?: CertificateTheme;
   customColor?: string;
   customTitle?: string;
+  withVellumClaim?: boolean;
 }
 
 interface CertificateFormProps {
@@ -103,6 +104,11 @@ export function CertificateForm({
   const [certCapacity, setCertCapacity] = useState<number | null>(null);
   const [isCalculatingCapacity, setIsCalculatingCapacity] = useState(false);
   const [lastCalculatedHash, setLastCalculatedHash] = useState<string>('');
+  const [addToVellum, setAddToVellum] = useState(false);
+
+  const isRecipientDid = Boolean(
+    resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')
+  );
 
   // DID resolution effect
   useEffect(() => {
@@ -154,10 +160,18 @@ export function CertificateForm({
     return () => clearTimeout(timer);
   }, [formData.recipientAddress, client]);
 
-  const notifyChange = (updatedData: CertificateData, currentSkillsInput = skillsInput) => {
+  const notifyChange = (
+    updatedData: CertificateData,
+    currentSkillsInput = skillsInput,
+    currentAddToVellum = addToVellum
+  ) => {
     if (onChange) {
+      const isDid = Boolean(
+        resolvedInfo?.isDid || updatedData.recipientAddress.startsWith('did:ckb:')
+      );
       onChange({
         ...updatedData,
+        withVellumClaim: currentAddToVellum && isDid,
         skills: currentSkillsInput
           ? currentSkillsInput.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
@@ -197,6 +211,7 @@ export function CertificateForm({
       theme: formData.theme,
       customColor: formData.customColor,
       customTitle: formData.customTitle,
+      addToVellum,
     });
 
     // Skip if fields haven't changed
@@ -226,6 +241,8 @@ export function CertificateForm({
             },
           },
           expirationDate: formData.expirationDate,
+          withVellumClaim: addToVellum && !!(resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')),
+          recipientDid: formData.recipientAddress.startsWith('did:ckb:') ? formData.recipientAddress : undefined,
         });
         setCertCapacity(result.exactCapacity);
         setLastCalculatedHash(fieldHash);
@@ -237,7 +254,7 @@ export function CertificateForm({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash]);
+  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash, addToVellum, resolvedInfo]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -287,6 +304,7 @@ export function CertificateForm({
       skills: skillsInput
         ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
+      withVellumClaim: addToVellum && !!(resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')),
     });
   };
 
@@ -380,6 +398,34 @@ export function CertificateForm({
               <AlertCircle className="h-4 w-4 text-red-500" />
               <span className="text-sm text-red-400">
                 {resolveError}
+              </span>
+            </div>
+          )}
+
+          {/* Vellum Claim Cell Toggle (when recipient is DID) */}
+          {isRecipientDid && (
+            <div className="flex items-center justify-between p-3 mt-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 hover:border-lavender-spark/30 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="addToVellum"
+                  checked={addToVellum}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setAddToVellum(checked);
+                    notifyChange(formData, skillsInput, checked);
+                  }}
+                  className="w-4 h-4 rounded border-fog-line/30 text-lavender-spark focus:ring-lavender-spark/40 bg-midnight cursor-pointer"
+                />
+                <label
+                  htmlFor="addToVellum"
+                  className="text-sm font-medium text-bone-white cursor-pointer select-none"
+                >
+                  Add to Vellum (Claim Cell)
+                </label>
+              </div>
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-shadow-plum text-lavender-spark border border-lavender-spark/20">
+                +350 CKB
               </span>
             </div>
           )}
@@ -661,6 +707,11 @@ export function CertificateForm({
             <span className="text-muted-foreground">
               Enter recipient details to see exact cost
             </span>
+          </div>
+        )}
+        {addToVellum && (
+          <div className="text-xs text-purple-400 mt-1">
+            Claim Cell: +350 CKB
           </div>
         )}
         <p className="text-xs text-muted-foreground mt-1">
