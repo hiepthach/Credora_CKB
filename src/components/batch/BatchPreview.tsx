@@ -21,6 +21,10 @@ import {
   Info,
 } from 'lucide-react';
 
+export interface BatchPreviewConfirmOptions {
+  includeVellumClaims?: boolean;
+}
+
 export interface BatchPreviewProps {
   entries: BatchEntry[];
   estimatedCost: string;
@@ -29,10 +33,15 @@ export interface BatchPreviewProps {
   issuerName?: string;
   issuerDescription?: string;
   client?: any;
-  onConfirm: (defaultStyle: VisualStyleConfig) => void;
+  onConfirm: (
+    defaultStyle: VisualStyleConfig,
+    options?: BatchPreviewConfirmOptions
+  ) => void;
   onCancel: () => void;
   loading?: boolean;
   progress?: BatchProgress | null;
+  includeVellumClaims?: boolean;
+  onIncludeVellumClaimsChange?: (include: boolean) => void;
 }
 
 const LAYOUT_OPTIONS: { id: CertificateLayout; label: string; icon: string; description: string }[] = [
@@ -52,6 +61,12 @@ const THEME_OPTIONS: { id: CertificateTheme; label: string; color: string }[] = 
   { id: 'custom', label: 'Custom', color: '#F26F21' },
 ];
 
+function isDidEntry(entry: BatchEntry): boolean {
+  if (entry.isDid) return true;
+  if (!entry.recipientAddress) return false;
+  return entry.recipientAddress.trim().startsWith('did:ckb:');
+}
+
 export function BatchPreview({
   entries,
   estimatedCost,
@@ -64,6 +79,8 @@ export function BatchPreview({
   onCancel,
   loading = false,
   progress,
+  includeVellumClaims: propIncludeVellumClaims,
+  onIncludeVellumClaimsChange,
 }: BatchPreviewProps) {
   const [defaultStyle, setDefaultStyle] = useState<VisualStyleConfig>({
     layout: 'classic',
@@ -71,6 +88,17 @@ export function BatchPreview({
     customColor: '#1E40AF',
     customTitle: '',
   });
+
+  const [uncontrolledIncludeVellumClaims, setUncontrolledIncludeVellumClaims] = useState(false);
+  const isControlled = propIncludeVellumClaims !== undefined;
+  const includeVellumClaims = isControlled ? propIncludeVellumClaims : uncontrolledIncludeVellumClaims;
+
+  const handleToggleVellumClaims = (checked: boolean) => {
+    if (!isControlled) {
+      setUncontrolledIncludeVellumClaims(checked);
+    }
+    onIncludeVellumClaimsChange?.(checked);
+  };
 
   const [liveEntries, setLiveEntries] = useState<BatchEntry[]>(entries);
   const [liveCost, setLiveCost] = useState<string>(estimatedCost);
@@ -114,6 +142,36 @@ export function BatchPreview({
 
   const validCount = liveEntries.filter((e) => e.valid).length;
   const invalidCount = liveEntries.filter((e) => !e.valid).length;
+
+  const validDidEntries = useMemo(() => {
+    return liveEntries.filter((e) => e.valid && isDidEntry(e));
+  }, [liveEntries]);
+
+  const hasDidEntries = validDidEntries.length > 0;
+  const additionalCapacityCkb = validDidEntries.length * 350;
+
+  const displayExactCapacity = useMemo(() => {
+    if (liveExactCapacity === undefined) return undefined;
+    return liveExactCapacity + (includeVellumClaims ? additionalCapacityCkb : 0);
+  }, [liveExactCapacity, includeVellumClaims, additionalCapacityCkb]);
+
+  const displayCost = useMemo(() => {
+    if (!includeVellumClaims || validDidEntries.length === 0) {
+      return liveCost;
+    }
+    if (liveExactCapacity !== undefined) {
+      return `${(liveExactCapacity + additionalCapacityCkb).toLocaleString()} CKB`;
+    }
+    const match = liveCost.match(/^([\d,]+(?:\.\d+)?)\s*(.*)$/);
+    if (match) {
+      const baseNum = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(baseNum)) {
+        const unit = match[2] ? ` ${match[2]}` : ' CKB';
+        return `${(baseNum + additionalCapacityCkb).toLocaleString()}${unit}`;
+      }
+    }
+    return `${liveCost} (+${additionalCapacityCkb.toLocaleString()} CKB)`;
+  }, [liveCost, liveExactCapacity, includeVellumClaims, validDidEntries.length, additionalCapacityCkb]);
 
   function updateStyleField<K extends keyof VisualStyleConfig>(
     field: K,
@@ -475,13 +533,37 @@ export function BatchPreview({
           )}
         </div>
 
+        {/* Vellum Claim Cells Option */}
+        {hasDidEntries && (
+          <div className="mb-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="includeVellumClaims"
+                checked={includeVellumClaims}
+                onChange={(e) => handleToggleVellumClaims(e.target.checked)}
+                className="w-4 h-4 rounded border-purple-400 text-purple-600 focus:ring-purple-500 bg-midnight cursor-pointer"
+              />
+              <label
+                htmlFor="includeVellumClaims"
+                className="text-sm font-medium text-bone-white cursor-pointer select-none"
+              >
+                Include Vellum Claim Cells ({validDidEntries.length} certificates)
+              </label>
+            </div>
+            <span className="ml-auto font-mono text-sm font-semibold text-purple-400">
+              +{additionalCapacityCkb.toLocaleString()} CKB
+            </span>
+          </div>
+        )}
+
         {/* Cost Estimate */}
         <div className="p-4 bg-deep-indigo/60 dark:bg-deep-indigo/40 rounded-xl mb-6 border border-fog-line/15">
           <div className="flex justify-between items-center">
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-bone-white font-medium">Total Locked Capacity</span>
-                {liveExactCapacity && !isRecalculating && (
+                {displayExactCapacity && !isRecalculating && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-signal-green/10 text-signal-green border border-signal-green/30">
                     Exact on-chain
                   </span>
@@ -498,15 +580,25 @@ export function BatchPreview({
             </div>
             <div className="text-right">
               <span className="text-xl font-bold text-signal-green font-mono">
-                {liveCost}
+                {displayCost}
               </span>
-              {liveExactCapacity && validCount > 0 && (
+              {displayExactCapacity && validCount > 0 && (
                 <span className="block text-xs text-mid-ash mt-0.5">
-                  avg. ~{Math.round(liveExactCapacity / validCount).toLocaleString()} CKB / cert
+                  avg. ~{Math.round(displayExactCapacity / validCount).toLocaleString()} CKB / cert
                 </span>
               )}
             </div>
           </div>
+          {includeVellumClaims && hasDidEntries && (
+            <div className="mt-3 pt-3 border-t border-fog-line/15 flex justify-between items-center text-xs">
+              <span className="text-purple-400 font-medium">
+                Vellum Claim Cells ({validDidEntries.length} certificates)
+              </span>
+              <span className="font-mono text-purple-400 font-semibold">
+                +{additionalCapacityCkb.toLocaleString()} CKB
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -520,7 +612,13 @@ export function BatchPreview({
             Cancel
           </Button>
           <Button
-            onClick={() => onConfirm(defaultStyle)}
+            onClick={() => {
+              if (hasDidEntries) {
+                onConfirm(defaultStyle, { includeVellumClaims });
+              } else {
+                onConfirm(defaultStyle);
+              }
+            }}
             disabled={loading || validCount === 0}
             loading={loading}
             className="flex-1"
