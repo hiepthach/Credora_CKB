@@ -2,10 +2,45 @@ import { ccc } from "@ckb-ccc/core";
 import {
   isDidCkb,
   resolveDidCkb,
+  listDidCkbsByLock,
   type DidCkbRecord,
 } from "@ckb-ccc/did-ckb";
 
 export * from "./types";
+
+/**
+ * Look up whether a lock script owns any registered did:ckb on-chain
+ */
+export async function findDidByLock(
+  client: ccc.Client,
+  lock: ccc.ScriptLike
+): Promise<string | null> {
+  try {
+    const records = await listDidCkbsByLock({ client, lock });
+    if (records && records.length > 0 && records[0].did) {
+      return records[0].did;
+    }
+    return null;
+  } catch (err) {
+    console.warn("Failed to lookup DID by lock:", err);
+    return null;
+  }
+}
+
+/**
+ * Look up whether the connected signer owns a registered did:ckb on-chain
+ */
+export async function findIssuerDid(
+  signer: ccc.Signer
+): Promise<string | null> {
+  try {
+    const addressObj = await signer.getRecommendedAddressObj();
+    return await findDidByLock(signer.client, addressObj.script);
+  } catch (err) {
+    console.warn("Failed to lookup issuer DID for signer:", err);
+    return null;
+  }
+}
 
 /**
  * Check if a string is a valid did:ckb: identifier
