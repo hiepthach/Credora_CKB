@@ -181,7 +181,7 @@ export function CertificateForm({
       onChange({
         ...updatedData,
         withVellumClaim: canIssueVellum,
-        issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
+        issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
         skills: currentSkillsInput
           ? currentSkillsInput.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
@@ -263,7 +263,7 @@ export function CertificateForm({
           expirationDate: formData.expirationDate,
           withVellumClaim: canIssueVellum,
           recipientDid: formData.recipientAddress.startsWith('did:ckb:') ? formData.recipientAddress : undefined,
-          issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
+          issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
         });
         setCertCapacity(result.exactCapacity);
         setLastCalculatedHash(fieldHash);
@@ -328,7 +328,7 @@ export function CertificateForm({
         ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
       withVellumClaim: canIssueVellum,
-      issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
+      issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
     });
   };
 

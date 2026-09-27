@@ -26,7 +26,7 @@ describe('useWallet issuer DID auto-detection', () => {
       getRecommendedAddress: vi.fn().mockResolvedValue('ckt1qtestaddress'),
     };
     const mockClient = {
-      getBalance: vi.fn().mockResolvedValue(1000n),
+      getBalance: vi.fn().mockResolvedValue(BigInt(1000)),
     };
 
     vi.mocked(useCcc).mockReturnValue({
@@ -36,7 +36,7 @@ describe('useWallet issuer DID auto-detection', () => {
       client: mockClient as any,
       signerInfo: { signer: mockSigner as any } as any,
       wallet: {} as any,
-    });
+    } as any);
 
     vi.mocked(findIssuerDid).mockResolvedValueOnce('did:ckb:qqtestissuerdid0000000000000');
 
@@ -56,7 +56,7 @@ describe('useWallet issuer DID auto-detection', () => {
       getRecommendedAddress: vi.fn().mockResolvedValue('ckt1qtestaddress'),
     };
     const mockClient = {
-      getBalance: vi.fn().mockResolvedValue(1000n),
+      getBalance: vi.fn().mockResolvedValue(BigInt(1000)),
     };
 
     vi.mocked(useCcc).mockReturnValue({
@@ -66,7 +66,7 @@ describe('useWallet issuer DID auto-detection', () => {
       client: mockClient as any,
       signerInfo: { signer: mockSigner as any } as any,
       wallet: {} as any,
-    });
+    } as any);
 
     vi.mocked(findIssuerDid).mockResolvedValueOnce(null);
 
@@ -87,7 +87,7 @@ describe('useWallet issuer DID auto-detection', () => {
       client: null,
       signerInfo: null,
       wallet: null,
-    });
+    } as any);
 
     const { result } = renderHook(() => useWallet());
 
