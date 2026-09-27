@@ -7,6 +7,7 @@ import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles, Loader2, CheckCirc
 import { cn } from '@/utils';
 import { CERTIFICATE_PRESETS } from '@/components/template';
 import { isDidInput } from '@/lib/did';
+import { isDidCkb } from '@ckb-ccc/did-ckb';
 import { useWallet } from '@/hooks/useWallet';
 
 export interface CertificateData {
@@ -23,6 +24,7 @@ export interface CertificateData {
   customColor?: string;
   customTitle?: string;
   withVellumClaim?: boolean;
+  issuerDid?: string;
 }
 
 interface CertificateFormProps {
@@ -71,7 +73,13 @@ export function CertificateForm({
   onCancel,
   loading = false,
 }: CertificateFormProps) {
-  const { client, signer, address: connectedAddress } = useWallet();
+  const {
+    client,
+    signer,
+    address: connectedAddress,
+    issuerDid: detectedIssuerDid,
+    isLoadingIssuerDid,
+  } = useWallet();
   const [resolvedInfo, setResolvedInfo] = useState<{
     address: string;
     isDid: boolean;
@@ -107,7 +115,7 @@ export function CertificateForm({
   const [addToVellum, setAddToVellum] = useState(false);
 
   const isRecipientDid = Boolean(
-    resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')
+    resolvedInfo?.isDid || isDidCkb(formData.recipientAddress.trim()) || formData.recipientAddress.startsWith('did:ckb:')
   );
 
   // DID resolution effect
@@ -167,17 +175,27 @@ export function CertificateForm({
   ) => {
     if (onChange) {
       const isDid = Boolean(
-        resolvedInfo?.isDid || updatedData.recipientAddress.startsWith('did:ckb:')
+        resolvedInfo?.isDid || isDidCkb(updatedData.recipientAddress.trim()) || updatedData.recipientAddress.startsWith('did:ckb:')
       );
+      const canIssueVellum = Boolean(currentAddToVellum && isDid && detectedIssuerDid);
       onChange({
         ...updatedData,
-        withVellumClaim: currentAddToVellum && isDid,
+        withVellumClaim: canIssueVellum,
+        issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
         skills: currentSkillsInput
           ? currentSkillsInput.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
       });
     }
   };
+
+  // Auto-uncheck Vellum if issuer DID becomes unavailable
+  useEffect(() => {
+    if (!detectedIssuerDid && addToVellum) {
+      setAddToVellum(false);
+      notifyChange(formData, skillsInput, false);
+    }
+  }, [detectedIssuerDid]);
 
   useEffect(() => {
     if (onChange) {
@@ -212,6 +230,7 @@ export function CertificateForm({
       customColor: formData.customColor,
       customTitle: formData.customTitle,
       addToVellum,
+      detectedIssuerDid,
     });
 
     // Skip if fields haven't changed
@@ -221,6 +240,7 @@ export function CertificateForm({
       setIsCalculatingCapacity(true);
       try {
         const { previewCertificateMint } = await import('@/lib/credentials');
+        const canIssueVellum = Boolean(addToVellum && isRecipientDid && detectedIssuerDid);
         const result = await previewCertificateMint(signer as any, {
           clusterId,
           issuerName: clusterName,
@@ -241,8 +261,9 @@ export function CertificateForm({
             },
           },
           expirationDate: formData.expirationDate,
-          withVellumClaim: addToVellum && !!(resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')),
+          withVellumClaim: canIssueVellum,
           recipientDid: formData.recipientAddress.startsWith('did:ckb:') ? formData.recipientAddress : undefined,
+          issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
         });
         setCertCapacity(result.exactCapacity);
         setLastCalculatedHash(fieldHash);
@@ -254,7 +275,7 @@ export function CertificateForm({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash, addToVellum, resolvedInfo]);
+  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash, addToVellum, resolvedInfo, detectedIssuerDid, isRecipientDid]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -298,13 +319,16 @@ export function CertificateForm({
     e.preventDefault();
     if (!validate()) return;
 
+    const canIssueVellum = Boolean(addToVellum && isRecipientDid && detectedIssuerDid);
+
     onSubmit({
       ...formData,
       expirationDate: formData.expirationDate ? formData.expirationDate : undefined,
       skills: skillsInput
         ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
-      withVellumClaim: addToVellum && !!(resolvedInfo?.isDid || formData.recipientAddress.startsWith('did:ckb:')),
+      withVellumClaim: canIssueVellum,
+      issuerDid: canIssueVellum ? detectedIssuerDid : undefined,
     });
   };
 
@@ -404,29 +428,80 @@ export function CertificateForm({
 
           {/* Vellum Claim Cell Toggle (when recipient is DID) */}
           {isRecipientDid && (
-            <div className="flex items-center justify-between p-3 mt-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 hover:border-lavender-spark/30 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  id="addToVellum"
-                  checked={addToVellum}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setAddToVellum(checked);
-                    notifyChange(formData, skillsInput, checked);
-                  }}
-                  className="w-4 h-4 rounded border-fog-line/30 text-lavender-spark focus:ring-lavender-spark/40 bg-midnight cursor-pointer"
-                />
-                <label
-                  htmlFor="addToVellum"
-                  className="text-sm font-medium text-bone-white cursor-pointer select-none"
-                >
-                  Add to Vellum (Claim Cell)
-                </label>
-              </div>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-shadow-plum text-lavender-spark border border-lavender-spark/20">
-                +350 CKB
-              </span>
+            <div className="mt-3 space-y-2">
+              {isLoadingIssuerDid ? (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 text-xs text-mid-ash">
+                  <Loader2 className="w-4 h-4 animate-spin text-lavender-spark" />
+                  <span>Checking issuer DID on CKB...</span>
+                </div>
+              ) : detectedIssuerDid ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 hover:border-lavender-spark/30 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="addToVellum"
+                        checked={addToVellum}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setAddToVellum(checked);
+                          notifyChange(formData, skillsInput, checked);
+                        }}
+                        className="w-4 h-4 rounded border-fog-line/30 text-lavender-spark focus:ring-lavender-spark/40 bg-midnight cursor-pointer"
+                      />
+                      <label
+                        htmlFor="addToVellum"
+                        className="text-sm font-medium text-bone-white cursor-pointer select-none"
+                      >
+                        Add to Vellum (Claim Cell)
+                      </label>
+                    </div>
+                    <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-shadow-plum text-lavender-spark border border-lavender-spark/20">
+                      +350 CKB
+                    </span>
+                  </div>
+                  {addToVellum && (
+                    <div className="flex items-center gap-2 text-xs text-lavender-spark bg-lavender-spark/10 p-2.5 rounded-lg border border-lavender-spark/20">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>
+                        Issuer DID: <strong className="font-mono text-bone-white">{detectedIssuerDid}</strong> (Detected from connected wallet)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-midnight-plum/40 border border-fog-line/10 opacity-60 cursor-not-allowed">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="addToVellum"
+                        checked={false}
+                        disabled
+                        className="w-4 h-4 rounded border-fog-line/30 text-mid-ash bg-midnight cursor-not-allowed"
+                      />
+                      <label
+                        htmlFor="addToVellum"
+                        className="text-sm font-medium text-mid-ash cursor-not-allowed select-none"
+                      >
+                        Add to Vellum (Claim Cell)
+                      </label>
+                    </div>
+                    <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-shadow-plum/50 text-mid-ash border border-fog-line/10">
+                      +350 CKB
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-300">Issuer DID required for Vellum</p>
+                      <p className="mt-0.5 text-amber-200/80">
+                        Your connected wallet has no registered DID on CKB. To issue Vellum Claim Cells, your wallet must own an on-chain CKB DID.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -709,7 +784,7 @@ export function CertificateForm({
             </span>
           </div>
         )}
-        {addToVellum && (
+        {addToVellum && detectedIssuerDid && (
           <div className="text-xs text-purple-400 mt-1">
             Claim Cell: +350 CKB
           </div>

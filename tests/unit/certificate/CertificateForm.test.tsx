@@ -1,18 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CertificateForm } from '@/components/certificate/CertificateForm';
+import { useWallet } from '@/hooks/useWallet';
+
+const defaultMockWallet = {
+  client: null, // No client in tests - DID resolution won't trigger
+  address: null,
+  signer: null,
+  isConnected: false,
+  isLoadingAddress: false,
+  open: vi.fn(),
+  issuerDid: 'did:ckb:qqtestissuer0000000000000',
+  isLoadingIssuerDid: false,
+};
 
 // Mock useWallet hook
 vi.mock('@/hooks/useWallet', () => ({
-  useWallet: vi.fn(() => ({
-    client: null, // No client in tests - DID resolution won't trigger
-    address: null,
-    signer: null,
-    isConnected: false,
-    isLoadingAddress: false,
-    open: vi.fn(),
-  })),
+  useWallet: vi.fn(),
 }));
+
+beforeEach(() => {
+  vi.mocked(useWallet).mockReturnValue(defaultMockWallet as any);
+});
 
 describe('CertificateForm Style Selection & Color Picker', () => {
   it('renders certificate layout, color picker, and custom title options and includes them on submit', () => {
@@ -181,12 +190,9 @@ describe('CertificateForm Style Selection & Color Picker', () => {
   it('allows clicking "Use my connected address" when wallet is connected', async () => {
     const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
     useWallet.mockReturnValue({
-      client: null,
+      ...defaultMockWallet,
       address: 'ckt1q_connected_user_wallet_address',
-      signer: null,
       isConnected: true,
-      isLoadingAddress: false,
-      open: vi.fn(),
     } as any);
 
     render(
@@ -294,6 +300,7 @@ describe('CertificateForm Vellum Claim Cell Toggle', () => {
         recipientName: 'Alice Nakamoto',
         courseName: 'Nervos Architecture',
         withVellumClaim: true,
+        issuerDid: 'did:ckb:qqtestissuer0000000000000',
       })
     );
 
@@ -333,7 +340,7 @@ describe('CertificateForm Vellum Claim Cell Toggle', () => {
     expect(screen.getByText(/Claim Cell:\s*\+350 CKB/i)).toBeInTheDocument();
   });
 
-  it('notifies onChange with withVellumClaim when toggled', () => {
+  it('notifies onChange with withVellumClaim and issuerDid when toggled', () => {
     const handleChange = vi.fn();
 
     render(
@@ -352,8 +359,82 @@ describe('CertificateForm Vellum Claim Cell Toggle', () => {
     expect(handleChange).toHaveBeenCalledWith(
       expect.objectContaining({
         withVellumClaim: true,
+        issuerDid: 'did:ckb:qqtestissuer0000000000000',
       })
     );
+  });
+
+  it('displays detected issuer DID badge when Vellum toggle is checked', () => {
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    expect(screen.getByText(/did:ckb:qqtestissuer0000000000000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Detected from connected wallet/i)).toBeInTheDocument();
+  });
+
+  it('disables Vellum toggle and displays warning banner when connected wallet has no DID', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDid: null,
+      isLoadingIssuerDid: false,
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i) as HTMLInputElement;
+    expect(checkbox).toBeDisabled();
+    expect(screen.getByText(/Issuer DID required for Vellum/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your connected wallet has no registered DID on CKB/i)
+    ).toBeInTheDocument();
+  });
+
+  it('shows loading indicator when isLoadingIssuerDid is true', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDid: null,
+      isLoadingIssuerDid: true,
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Checking issuer DID on CKB.../i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Add to Vellum \(Claim Cell\)/i)).not.toBeInTheDocument();
   });
 });
 
