@@ -57,6 +57,46 @@ if (typeof globalThis.fetch === 'undefined') {
   };
 }
 
+// Mock @usevellum/sdk
+vi.mock('@usevellum/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@usevellum/sdk')>();
+  return {
+    ...actual,
+    readClaims: vi.fn().mockResolvedValue({ claims: [], invalid: [] }),
+    writeClaim: vi.fn().mockImplementation(async (props: any) => {
+      if (props?.tx && typeof props.tx.addOutput === 'function') {
+        props.tx.addOutput(
+          {
+            capacity: BigInt(350_00000000),
+            lock: {
+              codeHash:
+                '0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d',
+              hashType: 'type',
+              args: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+            },
+            type: {
+              codeHash:
+                '0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157',
+              hashType: 'type',
+              args: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+            },
+          },
+          new Uint8Array([1, 2, 3])
+        );
+      }
+      return {
+        tx: props?.tx ?? {},
+        claimId: 'claim_mock123',
+        outputIndex: 1,
+        issuerSource: { kind: 'output', outputIndex: 1 },
+        controllerInputIndex: 0,
+        built: { txHash: '0x' + 'a'.repeat(64) },
+      };
+    }),
+    parseClaimPayload: vi.fn(),
+  };
+});
+
 // Mock @ckb-ccc/spore
 let sporeCallCount = 0;
 

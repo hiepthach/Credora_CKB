@@ -90,7 +90,7 @@ describe('VellumClaim', () => {
 
   describe('buildCredoraCoursePayload', () => {
     it('sets issuer_did to config.issuerDid when provided and distinguishes from subjectDid', async () => {
-      const { buildCredoraCoursePayload, DEFAULT_CREDORA_ISSUER_DID } = await import(
+      const { buildCredoraCoursePayload } = await import(
         '@/lib/credentials/vellumClaim'
       );
 
@@ -113,8 +113,8 @@ describe('VellumClaim', () => {
       expect(payload.metadata.grade).toBe('A+');
     });
 
-    it('falls back to DEFAULT_CREDORA_ISSUER_DID when issuerDid is omitted', async () => {
-      const { buildCredoraCoursePayload, DEFAULT_CREDORA_ISSUER_DID } = await import(
+    it('sets empty issuer_did when issuerDid is omitted', async () => {
+      const { buildCredoraCoursePayload } = await import(
         '@/lib/credentials/vellumClaim'
       );
 
@@ -128,14 +128,53 @@ describe('VellumClaim', () => {
         issuedAt: 1700000000,
       });
 
-      expect(payload.issuer_did).toBe(DEFAULT_CREDORA_ISSUER_DID);
-      expect(payload.issuer_did).not.toBe(studentSubject);
+      expect(payload.issuer_did).toBe('');
+    });
+  });
+
+  describe('issueVellumClaimCell', () => {
+    it('calls writeClaim with prepared payload and scripts', async () => {
+      const { issueVellumClaimCell, CredoraCourseSchemaHash } = await import(
+        '@/lib/credentials/vellumClaim'
+      );
+      const { writeClaim } = await import('@usevellum/sdk');
+
+      const mockSigner = {} as any;
+      const mockTx = { outputs: [], outputsData: [] } as any;
+
+      const result = await issueVellumClaimCell({
+        signer: mockSigner,
+        tx: mockTx,
+        claimRecipientDid: 'did:ckb:recipient123',
+        issuerDid: 'did:ckb:issuer456',
+        sporeId: '0x' + '11'.repeat(32),
+        courseId: 'course-101',
+        issuerName: 'Credora Academy',
+        issuedAt: 1700000000,
+      });
+
+      expect(writeClaim).toHaveBeenCalledWith(
+        expect.objectContaining({
+          issuerSigner: mockSigner,
+          input: expect.objectContaining({
+            subject: { did: 'did:ckb:recipient123' },
+            issuerDid: 'did:ckb:issuer456',
+            schemaHash: CredoraCourseSchemaHash,
+            payload: expect.objectContaining({
+              spore_id: '0x' + '11'.repeat(32),
+              course_id: 'course-101',
+            }),
+          }),
+          tx: mockTx,
+        })
+      );
+      expect(result.claimId).toBeDefined();
     });
   });
 
   describe('createVellumClaimCell', () => {
     it('creates Claim Cell with recipient lock, schema hash in type args, and encoded data', async () => {
-      const { createVellumClaimCell, CredoraCourseSchemaHash, DEFAULT_CREDORA_ISSUER_DID } =
+      const { createVellumClaimCell, CredoraCourseSchemaHash } =
         await import('@/lib/credentials/vellumClaim');
 
       const mockRecipientLock = {

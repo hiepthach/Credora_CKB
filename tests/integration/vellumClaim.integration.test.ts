@@ -16,9 +16,12 @@ import {
   issueCertificate,
   previewCertificateMint,
   clearCertificateCache,
-  DEFAULT_CREDORA_ISSUER_DID,
 } from '@/lib/credentials/issuer';
-import { CredoraCourseSchemaHash } from '@/lib/credentials/vellumClaim';
+import {
+  CredoraCourseSchemaHash,
+  VELLUM_DID_LOCK_DEPLOYMENT,
+  VELLUM_CLAIM_TYPE_DEPLOYMENT,
+} from '@/lib/credentials/vellumClaim';
 import { createSpore } from '@ckb-ccc/spore';
 import { readClaims, writeClaim, parseClaimPayload } from '@usevellum/sdk';
 import type { CredentialSubject } from '@/types';
@@ -29,13 +32,33 @@ vi.mock('@usevellum/sdk', async (importOriginal) => {
   return {
     ...actual,
     readClaims: vi.fn().mockResolvedValue({ claims: [], invalid: [] }),
-    writeClaim: vi.fn().mockResolvedValue({
-      tx: {} as any,
-      claimId: '0x' + '1'.repeat(64),
-      outputIndex: 1,
-      issuerSource: { kind: 'output', outputIndex: 1 },
-      controllerInputIndex: 0,
-      built: { txHash: '0x' + 'a'.repeat(64) },
+    writeClaim: vi.fn().mockImplementation(async (props: any) => {
+      if (props?.tx && typeof props.tx.addOutput === 'function') {
+        props.tx.addOutput(
+          {
+            capacity: BigInt(350_00000000),
+            lock: {
+              codeHash: '0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d',
+              hashType: 'type',
+              args: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+            },
+            type: {
+              codeHash: '0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157',
+              hashType: 'type',
+              args: '0x' + '11'.repeat(32) + '2151e638f99c8fe85110c1ffc151dd753d3e4334f2c1f9a30679cb3e654e65a4',
+            },
+          },
+          new Uint8Array([1, 2, 3]),
+        );
+      }
+      return {
+        tx: props?.tx ?? {},
+        claimId: 'claim_' + '1'.repeat(64),
+        outputIndex: 1,
+        issuerSource: { kind: 'output', outputIndex: 1 },
+        controllerInputIndex: 0,
+        built: { txHash: '0x' + 'a'.repeat(64) },
+      };
     }),
     parseClaimPayload: vi.fn(),
   };
@@ -78,6 +101,8 @@ describe('Vellum Claim Integration', () => {
   const testDid = 'did:ckb:qqstudentreceiver00000000000000000';
   const standardAddress =
     'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq';
+  const testIssuerDid =
+    'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
 
   const testSubjectWithDid: CredentialSubject = {
     id: testDid,
@@ -182,6 +207,7 @@ describe('Vellum Claim Integration', () => {
         clusterId: testClusterId,
         issuerName: 'Credora Academy',
         issuerDescription: 'CKB Credential Issuance Authority',
+        issuerDid: testIssuerDid,
         subject: testSubjectWithDid,
         withVellumClaim: true,
       });
@@ -222,6 +248,7 @@ describe('Vellum Claim Integration', () => {
         signer: mockSigner,
         clusterId: testClusterId,
         issuerName: 'Credora Academy',
+        issuerDid: testIssuerDid,
         subject: testSubjectWithDid,
         withVellumClaim: true,
         recipientDid: testDid,
@@ -249,15 +276,14 @@ describe('Vellum Claim Integration', () => {
       expect(mockTx.addOutput).toHaveBeenCalledTimes(1);
       const [claimOutput] = mockTx.addOutput.mock.calls[0];
 
-      // Verify recipient lock was passed to the Claim Cell
+      // Verify DID lock was used for the Claim Cell
       expect(claimOutput.lock.codeHash).toBe(
-        '0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8',
+        VELLUM_DID_LOCK_DEPLOYMENT.codeHash,
       );
       // Verify Claim Type script has CredoraCourseSchemaHash in args
       expect(claimOutput.type.args).toContain(CredoraCourseSchemaHash.slice(2));
       // Verify issuerDid and subjectDid are distinct
       expect(customIssuerDid).not.toBe(testSubjectWithDid.id);
-      expect(DEFAULT_CREDORA_ISSUER_DID).not.toBe(testSubjectWithDid.id);
     });
   });
 
@@ -309,6 +335,7 @@ describe('Vellum Claim Integration', () => {
           signer: mockSigner,
           clusterId: testClusterId,
           issuerName: 'Credora Academy',
+          issuerDid: testIssuerDid,
           subject: testSubjectWithAddress, // standard CKB address, not a DID
           withVellumClaim: true,
         }),
@@ -327,6 +354,7 @@ describe('Vellum Claim Integration', () => {
           signer: mockSigner,
           clusterId: testClusterId,
           issuerName: 'Credora Academy',
+          issuerDid: testIssuerDid,
           subject: testSubjectWithDid,
           withVellumClaim: true,
           recipientDid: 'ckt1qznotadid', // invalid DID
@@ -345,6 +373,7 @@ describe('Vellum Claim Integration', () => {
         signer: mockSigner,
         clusterId: testClusterId,
         issuerName: 'Credora Academy',
+        issuerDid: testIssuerDid,
         subject: testSubjectWithDid,
         withVellumClaim: true,
       });
@@ -377,6 +406,7 @@ describe('Vellum Claim Integration', () => {
       const preview = await previewCertificateMint(mockSigner, {
         clusterId: testClusterId,
         issuerName: 'Credora Academy',
+        issuerDid: testIssuerDid,
         subject: testSubjectWithDid,
         withVellumClaim: true,
       });
@@ -394,6 +424,7 @@ describe('Vellum Claim Integration', () => {
         signer: mockSigner,
         clusterId: testClusterId,
         issuerName: longIssuerName,
+        issuerDid: testIssuerDid,
         subject: testSubjectWithDid,
         withVellumClaim: true,
       });

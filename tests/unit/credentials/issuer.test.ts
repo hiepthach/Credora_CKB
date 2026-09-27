@@ -1036,7 +1036,7 @@ describe('verifyCellDNA', () => {
 
     // Test: Dual-output Spore DOB + Vellum Claim Cell
     it('should create transaction with both DOB and Claim Cell outputs with distinct issuerDid and subjectDid', async () => {
-      const { issueCertificate, DEFAULT_CREDORA_ISSUER_DID } = await import('../../../src/lib/credentials/issuer');
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
 
       const customIssuerDid = 'did:ckb:qqcustomissuerinstitution000';
       const result = await issueCertificate({
@@ -1057,11 +1057,10 @@ describe('verifyCellDNA', () => {
       expect(claimOutput.lock).toBeDefined();
       expect(claimOutput.type).toBeDefined();
       expect(customIssuerDid).not.toBe(testSubjectWithDid.id);
-      expect(DEFAULT_CREDORA_ISSUER_DID).toBeDefined();
     });
 
     // Test: Issue certificate with Vellum Claim option (DID recipient via subject.id)
-    it('should accept withVellumClaim param when recipient is a DID', async () => {
+    it('should accept withVellumClaim param when recipient is a DID and issuerDid is provided', async () => {
       const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
 
       const result = await issueCertificate({
@@ -1070,10 +1069,24 @@ describe('verifyCellDNA', () => {
         issuerName: testIssuerName,
         subject: testSubjectWithDid,
         withVellumClaim: true,
+        issuerDid: 'did:ckb:qqteacherissuer00000000000',
       });
 
       expect(result.certificateId).toBeDefined();
       expect(result.claimId).toBeDefined();
+    });
+
+    it('should throw error when withVellumClaim is true but issuerDid is missing', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+      await expect(
+        issueCertificate({
+          signer: createMockSigner(),
+          clusterId: testClusterId,
+          issuerName: testIssuerName,
+          subject: testSubjectWithDid,
+          withVellumClaim: true,
+        })
+      ).rejects.toThrow('issuerDid is required when withVellumClaim is true');
     });
 
     // Test: Issue certificate without Vellum Claim (DID recipient)

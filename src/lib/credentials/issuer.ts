@@ -6,9 +6,7 @@ import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
 import { resolveRecipientInput } from '@/lib/did';
-import { createVellumClaimCell, DEFAULT_CREDORA_ISSUER_DID } from './vellumClaim';
-
-export { DEFAULT_CREDORA_ISSUER_DID };
+import { issueVellumClaimCell } from './vellumClaim';
 
 export interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -21,7 +19,7 @@ export interface IssueCertificateParams {
   withVellumClaim?: boolean;
   /** Optional recipient DID, required if withVellumClaim is true and subject.id is not a DID */
   recipientDid?: string;
-  /** Optional issuer DID (Credora platform/teacher). Defaults to DEFAULT_CREDORA_ISSUER_DID */
+  /** Required when withVellumClaim is true: DID of the issuer/organization */
   issuerDid?: string;
 }
 
@@ -157,12 +155,14 @@ export async function issueCertificate(
       let claimId: string | undefined;
 
       if (params.withVellumClaim && claimRecipientDid) {
-        const issuerDid = params.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
-        const claimResult = await createVellumClaimCell({
-          client: liveSigner.client,
-          issuerDid,
-          subjectDid: claimRecipientDid,
-          recipientLock: recipientLockScript,
+        if (!params.issuerDid) {
+          throw new Error('issuerDid is required when withVellumClaim is true');
+        }
+        const claimResult = await issueVellumClaimCell({
+          signer: liveSigner,
+          tx,
+          claimRecipientDid,
+          issuerDid: params.issuerDid,
           sporeId: sporeId || certificateId,
           courseId:
             (subject as any).course?.id ||
@@ -176,16 +176,6 @@ export async function issueCertificate(
             : undefined,
           grade: subject.grade,
         });
-
-        // Add Claim Cell as second output
-        if (typeof (tx as any).addOutput === 'function') {
-          (tx as any).addOutput(claimResult.claimCellOutput, claimResult.claimCellData);
-        } else {
-          if (!tx.outputs) (tx as any).outputs = [];
-          if (!tx.outputsData) (tx as any).outputsData = [];
-          tx.outputs.push(claimResult.claimCellOutput);
-          tx.outputsData.push(ccc.hexFrom(claimResult.claimCellData));
-        }
 
         claimId = claimResult.claimId;
       }
@@ -246,7 +236,7 @@ export function estimateCredoraCoursePayloadSize(params: PreviewParams): number 
   const payload = {
     spore_id: '0x' + 'a'.repeat(64),
     course_id: 'course-001',
-    issuer_did: params.issuerDid || DEFAULT_CREDORA_ISSUER_DID,
+    issuer_did: params.issuerDid || 'did:ckb:issuer',
     issued_at: Date.now(),
     metadata: {
       course_name: params.issuerName || 'Course',

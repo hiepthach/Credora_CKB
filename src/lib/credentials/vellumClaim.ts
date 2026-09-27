@@ -7,7 +7,7 @@
 
 import { ccc } from '@ckb-ccc/core';
 import { didToArgs } from '@ckb-ccc/did-ckb';
-import { ClaimData } from '@usevellum/sdk';
+import { ClaimData, writeClaim } from '@usevellum/sdk';
 import * as dagCbor from '@ipld/dag-cbor';
 
 import {
@@ -21,9 +21,6 @@ export {
   CredoraCourseSchemaHash,
   computeCanonicalSchemaHash,
 };
-
-export const DEFAULT_CREDORA_ISSUER_DID =
-  'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
 
 export const VELLUM_DEPLOYMENT_TX_HASH =
   '0xaf693346282063a5d51f79d180fc807cdba1b8ac9d7af30085ff0aa190e2686c' as `0x${string}`;
@@ -198,7 +195,7 @@ export interface CreateVellumClaimConfig {
 export function buildCredoraCoursePayload(
   config: CreateVellumClaimConfig,
 ): CredoraCoursePayload {
-  const issuerDid = config.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
+  const issuerDid = config.issuerDid || '';
   return {
     spore_id: config.sporeId,
     course_id: config.courseId,
@@ -267,7 +264,7 @@ function resolveIssuerId(issuerDid: string): `0x${string}` {
 export async function createVellumClaimCell(
   config: CreateVellumClaimConfig,
 ): Promise<VellumClaimResult> {
-  const issuerDid = config.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
+  const issuerDid = config.issuerDid || '';
   const payload = buildCredoraCoursePayload({
     ...config,
     issuerDid,
@@ -338,6 +335,62 @@ export async function createVellumClaimCell(
     claimCellData,
     claimId: `claim_${config.sporeId.slice(0, 16)}`,
   };
+}
+
+export interface IssueVellumClaimParams {
+  signer: ccc.Signer;
+  tx: ccc.TransactionLike;
+  claimRecipientDid: string;
+  issuerDid: string;
+  sporeId: string;
+  courseId: string;
+  issuerName: string;
+  issuedAt: number;
+  expiresAt?: number;
+  grade?: string;
+}
+
+/**
+ * Issue a Vellum Claim Cell using @usevellum/sdk writeClaim.
+ * Directly appends the Claim Cell output and required dependencies to the transaction.
+ * Pure implementation without mock or fallback in source code.
+ */
+export async function issueVellumClaimCell(
+  params: IssueVellumClaimParams
+): Promise<{ claimId: string; tx: ccc.TransactionLike }> {
+  const payload = buildCredoraCoursePayload({
+    sporeId: params.sporeId,
+    courseId: params.courseId,
+    subjectDid: params.claimRecipientDid,
+    issuerDid: params.issuerDid,
+    issuerName: params.issuerName,
+    issuedAt: params.issuedAt,
+    expiresAt: params.expiresAt,
+    grade: params.grade,
+  });
+
+  if (!isValidCredoraCoursePayload(payload)) {
+    throw new Error('Invalid CredoraCoursePayload');
+  }
+
+  const scripts = getVellumScriptConfig();
+
+  // Direct call to @usevellum/sdk writeClaim
+  const result = await writeClaim({
+    issuerSigner: params.signer,
+    scripts,
+    input: {
+      subject: { did: params.claimRecipientDid },
+      issuerDid: params.issuerDid,
+      schemaHash: CredoraCourseSchemaHash,
+      payload,
+      issuedAt: params.issuedAt,
+      expiresAt: params.expiresAt,
+    },
+    tx: params.tx,
+  });
+
+  return { claimId: result.claimId, tx: result.tx };
 }
 
 /**
