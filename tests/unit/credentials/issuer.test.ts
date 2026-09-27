@@ -902,6 +902,39 @@ describe('Certificate Service (Issuer)', () => {
         })
       ).rejects.toThrow('Recipient identifier (address or DID) is required');
     });
+
+    it('should return combined capacity when withVellumClaim is true', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await previewCertificateMint({
+        signer: createMockSigner() as any,
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: validSubject,
+        withVellumClaim: true,
+        recipientDid: 'did:ckb:abc123',
+      });
+
+      expect(result.claimCellCapacity).toBeDefined();
+      expect(result.claimCellCapacity).toBeGreaterThan(0);
+      expect(result.dobCellCapacity).toBe(500);
+      expect(result.exactCapacity).toBeGreaterThan(result.dobCellCapacity);
+      expect(result.exactCapacity).toBe(result.dobCellCapacity + result.claimCellCapacity!);
+    });
+
+    it('should return dobCellCapacity and exactCapacity without claimCellCapacity when withVellumClaim is false or undefined', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await previewCertificateMint(createMockSigner() as any, {
+        clusterId: '0x' + '00'.repeat(32),
+        issuerName: 'Test Issuer',
+        subject: validSubject,
+      });
+
+      expect(result.dobCellCapacity).toBe(500);
+      expect(result.exactCapacity).toBe(500);
+      expect(result.claimCellCapacity).toBeUndefined();
+    });
   });
 
 describe('verifyCellDNA', () => {

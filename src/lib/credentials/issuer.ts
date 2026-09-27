@@ -218,23 +218,84 @@ export async function issueCertificate(
   throw new Error('Live signer is required to issue a certificate');
 }
 
+export interface PreviewParams extends Omit<IssueCertificateParams, 'signer'> {
+  signer?: unknown; // ccc.Signer in production
+  withVellumClaim?: boolean;
+  recipientDid?: string;
+}
+
+export interface PreviewResult {
+  exactCapacity: number;
+  dobCellCapacity: number;
+  claimCellCapacity?: number;
+  dnaBytes: number;
+  sporeId: string;
+}
+
+/**
+ * Estimate Credora course payload size for Vellum Claim Cell
+ */
+export function estimateCredoraCoursePayloadSize(params: PreviewParams): number {
+  const payload = {
+    spore_id: '0x' + 'a'.repeat(64),
+    course_id: 'course-001',
+    issuer_did: params.recipientDid || 'did:ckb:abc123',
+    issued_at: Date.now(),
+    metadata: {
+      course_name: params.issuerName || 'Course',
+      completion_date: new Date().toISOString().split('T')[0],
+    },
+  };
+  return JSON.stringify(payload).length;
+}
+
 /**
  * Preview certificate minting — builds a transaction skeleton WITHOUT sending
  * to determine the exact CKB capacity that will be locked.
  *
  * Uses the same transaction building logic as issueCertificate() but reads
  * the output capacity from the built transaction before sending.
+ *
+ * Supports both call styles:
+ * - previewCertificateMint(signer, params)
+ * - previewCertificateMint(paramsWithSigner)
  */
 export async function previewCertificateMint(
-  signer: ccc.Signer,
-  params: {
-    clusterId: string;
-    issuerName: string;
-    issuerDescription?: string;
-    subject: CredentialSubject;
-    expirationDate?: string;
+  params: PreviewParams
+): Promise<PreviewResult>;
+export async function previewCertificateMint(
+  signer: unknown,
+  params: PreviewParams
+): Promise<PreviewResult>;
+export async function previewCertificateMint(
+  signerOrParams: unknown,
+  maybeParams?: PreviewParams
+): Promise<PreviewResult> {
+  let liveSigner: ccc.Signer;
+  let params: PreviewParams;
+
+  if (maybeParams !== undefined) {
+    liveSigner = signerOrParams as ccc.Signer;
+    params = maybeParams;
+  } else if (
+    signerOrParams &&
+    typeof signerOrParams === 'object' &&
+    'clusterId' in signerOrParams
+  ) {
+    params = signerOrParams as PreviewParams;
+    liveSigner = (params as any).signer as ccc.Signer;
+  } else {
+    throw new Error('Invalid arguments passed to previewCertificateMint');
   }
-): Promise<{ exactCapacity: number; dnaBytes: number; sporeId: string }> {
+
+  if (!liveSigner && (params as any)?.signer) {
+    liveSigner = (params as any).signer as ccc.Signer;
+  }
+
+  if (!liveSigner) {
+    throw new Error('Live signer is required to preview certificate mint');
+  }
+
   const { clusterId, issuerName, issuerDescription, subject, expirationDate } = params;
 
   // Generate certificate ID for DNA encoding
@@ -251,12 +312,12 @@ export async function previewCertificateMint(
   const dnaBytes = new TextEncoder().encode(dnaJson).length;
 
   // Resolve recipient lock script
-  const recipientInput = subject.id || '';
+  const recipientInput = subject?.id || params.recipientDid || '';
   if (!recipientInput) {
     throw new Error('Recipient identifier (address or DID) is required');
   }
 
-  const resolved = await resolveRecipientInput(signer.client, recipientInput);
+  const resolved = await resolveRecipientInput((liveSigner as any)?.client, recipientInput);
   const recipientLockScript = resolved.targetLock;
 
   // Check cluster validity
@@ -268,7 +329,7 @@ export async function previewCertificateMint(
 
   // Build transaction skeleton — this does NOT send the transaction
   const { tx, id: sporeId } = await createSpore({
-    signer,
+    signer: liveSigner,
     data: {
       contentType: 'application/json',
       content: ccc.bytesFrom(new TextEncoder().encode(dnaJson)),
@@ -289,9 +350,24 @@ export async function previewCertificateMint(
   // When clusterMode='clusterCell', outputs = [DOB cell (index 0), cluster cell (index 1)]
   // DOB cell is added by createSpore(), cluster cell is added by prepareCluster() after
   const outputCell = outputs[0];
-  const exactCapacity = Number(outputCell.capacity) / 100_000_000;
+  const dobCellCapacity = Number(outputCell.capacity) / 100_000_000;
 
-  return { exactCapacity, dnaBytes, sporeId };
+  let claimCellCapacity: number | undefined;
+
+  if (params.withVellumClaim) {
+    // Base capacity: 350 CKB standard estimate for Vellum Claim Cell
+    claimCellCapacity = 350;
+  }
+
+  const exactCapacity = dobCellCapacity + (claimCellCapacity || 0);
+
+  return {
+    exactCapacity,
+    dobCellCapacity,
+    claimCellCapacity,
+    dnaBytes,
+    sporeId,
+  };
 }
 
 export function isCertificateJson(text: string): boolean {
