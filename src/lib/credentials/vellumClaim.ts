@@ -25,8 +25,62 @@ export {
 export const DEFAULT_CREDORA_ISSUER_DID =
   'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
 
-export const VELLUM_CLAIM_TYPE_CODE_HASH =
-  '0x0000000000000000000000000000000000000000000000000000000000000001';
+export const VELLUM_DEPLOYMENT_TX_HASH =
+  '0xaf693346282063a5d51f79d180fc807cdba1b8ac9d7af30085ff0aa190e2686c' as `0x${string}`;
+
+export const VELLUM_CLAIM_TYPE_DEPLOYMENT = {
+  codeHash:
+    '0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157' as `0x${string}`,
+  hashType: 'type' as ccc.HashType,
+  cellDep: {
+    outPoint: {
+      txHash: VELLUM_DEPLOYMENT_TX_HASH,
+      index: 0,
+    },
+    depType: 'code' as ccc.DepType,
+  },
+};
+
+export const VELLUM_DID_LOCK_DEPLOYMENT = {
+  codeHash:
+    '0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d' as `0x${string}`,
+  hashType: 'type' as ccc.HashType,
+  cellDep: {
+    outPoint: {
+      txHash: VELLUM_DEPLOYMENT_TX_HASH,
+      index: 1,
+    },
+    depType: 'code' as ccc.DepType,
+  },
+};
+
+export const VELLUM_CLAIM_TYPE_CODE_HASH = VELLUM_CLAIM_TYPE_DEPLOYMENT.codeHash;
+
+export function getVellumScriptConfig(): {
+  claimType: ccc.ScriptInfoLike;
+  didLock: ccc.ScriptInfoLike;
+} {
+  return {
+    claimType: {
+      codeHash: VELLUM_CLAIM_TYPE_DEPLOYMENT.codeHash,
+      hashType: VELLUM_CLAIM_TYPE_DEPLOYMENT.hashType,
+      cellDeps: [
+        {
+          cellDep: VELLUM_CLAIM_TYPE_DEPLOYMENT.cellDep,
+        },
+      ],
+    },
+    didLock: {
+      codeHash: VELLUM_DID_LOCK_DEPLOYMENT.codeHash,
+      hashType: VELLUM_DID_LOCK_DEPLOYMENT.hashType,
+      cellDeps: [
+        {
+          cellDep: VELLUM_DID_LOCK_DEPLOYMENT.cellDep,
+        },
+      ],
+    },
+  };
+}
 
 export interface CredoraCourseMetadata {
   course_name: string;
