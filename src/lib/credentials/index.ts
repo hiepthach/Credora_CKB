@@ -41,3 +41,15 @@ export {
   getDefaultCertificateFields,
   clearTemplateCache,
 } from './services';
+
+// Vellum Claim Cell
+export {
+  CredoraCourseSchemaHash,
+  type CredoraCoursePayload,
+  isValidCredoraCoursePayload,
+  createVellumClaimCell,
+  type VellumClaimResult,
+  encodeCredoraCoursePayload,
+  buildCredoraCoursePayload,
+  estimatePayloadSize,
+} from './vellumClaim';
