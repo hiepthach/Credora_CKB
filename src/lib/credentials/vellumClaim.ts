@@ -10,11 +10,17 @@ import { didToArgs } from '@ckb-ccc/did-ckb';
 import { ClaimData } from '@usevellum/sdk';
 import * as dagCbor from '@ipld/dag-cbor';
 
-// Schema hash for credora.course.v1
-// TODO: Compute from actual schema manifest using BLAKE2b-256
-// For now, using a placeholder that will be replaced with the actual hash
-export const CredoraCourseSchemaHash =
-  '0x7c5ed5e9a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2';
+import {
+  CREDORA_COURSE_SCHEMA_MANIFEST,
+  CredoraCourseSchemaHash,
+  computeCanonicalSchemaHash,
+} from './schemas/credoraCourse';
+
+export {
+  CREDORA_COURSE_SCHEMA_MANIFEST,
+  CredoraCourseSchemaHash,
+  computeCanonicalSchemaHash,
+};
 
 export const DEFAULT_CREDORA_ISSUER_DID =
   'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';

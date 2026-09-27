@@ -125,11 +125,15 @@ vi.mock('@ckb-ccc/spore/advanced', () => ({
 }));
 
 // Mock @ckb-ccc/core
-vi.mock('@ckb-ccc/core', () => ({
-  ccc: {
-    bytesFrom: (val: any) => val,
-    hexFrom: (val: any) => String(val),
-  },
+vi.mock('@ckb-ccc/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@ckb-ccc/core')>();
+  return {
+    ...actual,
+    ccc: {
+      ...actual.ccc,
+      bytesFrom: (val: any) => val,
+      hexFrom: (val: any) => String(val),
+    },
   ClientPublicTestnet: vi.fn().mockImplementation(() => ({
     getTransaction: vi.fn().mockResolvedValue({ transaction: { outputsData: [] } }),
     findCellsByLock: vi.fn().mockReturnValue({
@@ -154,5 +158,6 @@ vi.mock('@ckb-ccc/core', () => ({
       },
     }),
   },
-}));
+};
+});
 
