@@ -946,5 +946,134 @@ describe('verifyCellDNA', () => {
       expect(verifyCellDNA('0x1234', { certificate: { id: 'cert-123' } })).toBe(false);
     });
   });
+
+  describe('Vellum Claim Cell Dual-Output', () => {
+    const testDidSubject = 'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
+    const testSubjectWithDid: CredentialSubject = {
+      id: testDidSubject,
+      type: 'CourseCertificate',
+      name: 'Alice Bob',
+      courseName: 'CKB Development',
+      completionDate: '2026-09-26',
+      grade: 'A',
+    };
+
+    let mockTx: any;
+
+    beforeEach(() => {
+      mockTx = {
+        outputs: [
+          {
+            capacity: BigInt(500_000_00000),
+            lock: { args: '0x', codeHash: '0x', hashType: 'type' },
+            type: { args: '0x' + '00'.repeat(32), codeHash: '0x', hashType: 'type' },
+          },
+        ],
+        outputsData: ['0x'],
+        addOutput: vi.fn((output, data) => {
+          mockTx.outputs.push(output);
+          mockTx.outputsData.push(data);
+        }),
+        completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+        completeFeeBy: vi.fn().mockResolvedValue(undefined),
+      };
+
+      // Mock createSpore for these tests
+      vi.mocked(createSpore).mockResolvedValue({
+        tx: mockTx,
+        id: '0x' + '00'.repeat(32),
+      } as any);
+    });
+
+    // Test: Dual-output Spore DOB + Vellum Claim Cell
+    it('should create transaction with both DOB and Claim Cell outputs', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: testSubjectWithDid,
+        withVellumClaim: true,
+        recipientDid: 'did:ckb:abc123',
+      });
+
+      expect(result.txHash).toBeDefined();
+      expect(result.sporeId).toBeDefined();
+      expect(result.claimId).toBeDefined();
+      expect(mockTx.addOutput).toHaveBeenCalled();
+    });
+
+    // Test: Issue certificate with Vellum Claim option (DID recipient via subject.id)
+    it('should accept withVellumClaim param when recipient is a DID', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: testSubjectWithDid,
+        withVellumClaim: true,
+      });
+
+      expect(result.certificateId).toBeDefined();
+      expect(result.claimId).toBeDefined();
+    });
+
+    // Test: Issue certificate without Vellum Claim (DID recipient)
+    it('should accept params without withVellumClaim option', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: testSubjectWithDid,
+        // withVellumClaim not set - should work
+      });
+
+      expect(result.certificateId).toBeDefined();
+      expect(result.claimId).toBeUndefined();
+    });
+
+    // Test: Reject Vellum Claim when recipient is not a DID (subject.id is address)
+    it('should throw error when withVellumClaim is true but recipient is not a DID', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+
+      const addressSubject: CredentialSubject = {
+        id: validRecipientAddress, // Not a DID
+        type: 'CourseCertificate',
+        name: 'Bob Charlie',
+        courseName: 'CKB Basics',
+        completionDate: '2026-09-26',
+      };
+
+      await expect(
+        issueCertificate({
+          signer: createMockSigner(),
+          clusterId: testClusterId,
+          issuerName: testIssuerName,
+          subject: addressSubject,
+          withVellumClaim: true,
+        })
+      ).rejects.toThrow(/recipient must be a DID/i);
+    });
+
+    // Test: Reject Vellum Claim when recipientDid is not a DID
+    it('should reject Vellum Claim when recipient is not a DID', async () => {
+      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+
+      const result = issueCertificate({
+        signer: createMockSigner(),
+        clusterId: testClusterId,
+        issuerName: testIssuerName,
+        subject: validSubject,
+        withVellumClaim: true,
+        recipientDid: 'ckt1qz...', // Not a DID
+      });
+
+      await expect(result).rejects.toThrow('Recipient must be a DID for Vellum Claim');
+    });
+  });
 });
 

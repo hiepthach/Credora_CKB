@@ -1,24 +1,37 @@
 import { ccc, Address as CkbAddress, ClientPublicTestnet } from '@ckb-ccc/core';
 import { createSpore, meltSpore, findSpore } from '@ckb-ccc/spore';
 import { unpackToRawSporeData } from '@ckb-ccc/spore/advanced';
+import { isDidCkb } from '@ckb-ccc/did-ckb';
 import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
 import { resolveRecipientInput } from '@/lib/did';
+import { createVellumClaimCell } from './vellumClaim';
 
-interface IssueCertificateParams {
+export interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
   clusterId: string;
   issuerName: string;
   issuerDescription?: string;
   subject: CredentialSubject;
   expirationDate?: string;
+  /** Optional: Add Vellum Claim Cell as dual-output (requires recipient to be a DID) */
+  withVellumClaim?: boolean;
+  /** Optional recipient DID, required if withVellumClaim is true and subject.id is not a DID */
+  recipientDid?: string;
 }
 
-interface IssueCertificateResult {
+export interface IssueCertificateResult {
   certificateId: string;
   transactionHash: string;
+  txHash?: string;
   sporeId?: string;
+  claimId?: string;
+}
+
+function isValidDid(did?: string): boolean {
+  if (!did || typeof did !== 'string') return false;
+  return did.startsWith('did:ckb:') || isDidCkb(did);
 }
 
 interface GetCertificateResult {
@@ -105,6 +118,18 @@ export async function issueCertificate(
       throw new Error(`Failed to resolve lock script for recipient "${recipientInput}"`);
     }
 
+    // Validate: Vellum Claim requires recipient to be a DID
+    let claimRecipientDid: string | undefined;
+    if (params.withVellumClaim) {
+      if (params.recipientDid !== undefined && !isValidDid(params.recipientDid)) {
+        throw new Error('Recipient must be a DID for Vellum Claim');
+      }
+      claimRecipientDid = params.recipientDid || resolvedDid;
+      if (!isValidDid(claimRecipientDid)) {
+        throw new Error('Recipient must be a DID for Vellum Claim');
+      }
+    }
+
     try {
       const hasValidCluster = Boolean(
         clusterId &&
@@ -124,6 +149,41 @@ export async function issueCertificate(
         clusterMode: hasValidCluster ? 'clusterCell' : undefined,
       });
 
+      // After Spore creation, optionally add Claim Cell as dual-output
+      let claimId: string | undefined;
+
+      if (params.withVellumClaim && claimRecipientDid) {
+        const claimResult = await createVellumClaimCell({
+          client: liveSigner.client,
+          issuerDid: claimRecipientDid,
+          subjectDid: claimRecipientDid,
+          sporeId: sporeId || certificateId,
+          courseId:
+            (subject as any).course?.id ||
+            (subject as any).courseId ||
+            subject.courseName ||
+            'unknown',
+          issuerName,
+          issuedAt: Math.floor(Date.now() / 1000),
+          expiresAt: expirationDate
+            ? Math.floor(new Date(expirationDate).getTime() / 1000)
+            : undefined,
+          grade: subject.grade,
+        });
+
+        // Add Claim Cell as second output
+        if (typeof (tx as any).addOutput === 'function') {
+          (tx as any).addOutput(claimResult.claimCellOutput, claimResult.claimCellData);
+        } else {
+          if (!tx.outputs) (tx as any).outputs = [];
+          if (!tx.outputsData) (tx as any).outputsData = [];
+          tx.outputs.push(claimResult.claimCellOutput);
+          tx.outputsData.push(ccc.hexFrom(claimResult.claimCellData));
+        }
+
+        claimId = claimResult.claimId;
+      }
+
       await tx.completeInputsByCapacity(liveSigner);
       await tx.completeFeeBy(liveSigner, 1000);
       const txHash = await liveSigner.sendTransaction(tx);
@@ -135,7 +195,9 @@ export async function issueCertificate(
       return {
         certificateId: sporeId || certificateId,
         transactionHash: txHash,
+        txHash,
         sporeId,
+        claimId,
       };
     } catch (err: any) {
       const msg = err?.message || String(err);

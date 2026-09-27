@@ -5,7 +5,8 @@
  * See: docs/Design_spec/09_Vellum_Integration_Design.md
  */
 
-import type { ccc } from '@ckb-ccc/core';
+import { ccc } from '@ckb-ccc/core';
+import * as dagCbor from '@ipld/dag-cbor';
 
 // Schema hash for credora.course.v1
 // TODO: Compute from actual schema manifest using BLAKE2b-256
@@ -100,12 +101,15 @@ export interface VellumClaimResult {
  * Configuration for creating a Vellum Claim Cell
  */
 export interface CreateVellumClaimConfig {
+  client?: ccc.Client;
   /** The Spore ID of the certificate this claim references */
   sporeId: string;
   /** Course identifier */
   courseId: string;
   /** The DID of the certificate holder (subject of the claim) */
-  subjectDid: string;
+  subjectDid?: string;
+  /** DID used as issuer/subject identifier in payload (alias for subjectDid) */
+  issuerDid?: string;
   /** Name of the issuer */
   issuerName: string;
   /** Unix timestamp when certificate was issued */
@@ -122,10 +126,11 @@ export interface CreateVellumClaimConfig {
 export function buildCredoraCoursePayload(
   config: CreateVellumClaimConfig,
 ): CredoraCoursePayload {
+  const did = config.issuerDid || config.subjectDid || '';
   return {
     spore_id: config.sporeId,
     course_id: config.courseId,
-    issuer_did: config.subjectDid,
+    issuer_did: did,
     issued_at: config.issuedAt,
     expires_at: config.expiresAt,
     metadata: {
@@ -135,6 +140,76 @@ export function buildCredoraCoursePayload(
         .split('T')[0],
       grade: config.grade,
     },
+  };
+}
+
+/**
+ * Recursively strip undefined properties from an object (required for DAG-CBOR encoding)
+ */
+function stripUndefined<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(stripUndefined) as unknown as T;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = stripUndefined(value);
+    }
+  }
+  return result as T;
+}
+
+/**
+ * Encode a CredoraCoursePayload into DAG-CBOR bytes with JSON fallback
+ */
+export function encodeCredoraCoursePayload(
+  payload: CredoraCoursePayload,
+): Uint8Array {
+  try {
+    const cleaned = stripUndefined(payload);
+    const encoded = dagCbor.encode(cleaned);
+    return new Uint8Array(encoded);
+  } catch {
+    return new TextEncoder().encode(JSON.stringify(payload));
+  }
+}
+
+/**
+ * Create a Vellum Claim Cell output and data for inclusion as a dual-output
+ */
+export async function createVellumClaimCell(
+  config: CreateVellumClaimConfig,
+): Promise<VellumClaimResult> {
+  const payload = buildCredoraCoursePayload(config);
+
+  if (!isValidCredoraCoursePayload(payload)) {
+    throw new Error('Invalid CredoraCoursePayload');
+  }
+
+  const encodedPayload = encodeCredoraCoursePayload(payload);
+
+  const emptyCodeHash = ('0x' + '00'.repeat(32)) as `0x${string}`;
+  const claimCellOutput: ccc.CellOutput = {
+    capacity: BigInt(350_00000000), // 350 CKB estimate
+    lock: {
+      codeHash: emptyCodeHash,
+      hashType: 'type',
+      args: '0x',
+    } as unknown as ccc.Script,
+    type: {
+      codeHash: emptyCodeHash,
+      hashType: 'type',
+      args: '0x',
+    } as unknown as ccc.Script,
+  } as unknown as ccc.CellOutput;
+
+  return {
+    claimCellOutput,
+    claimCellData: encodedPayload,
+    claimId: `claim_${config.sporeId.slice(0, 16)}`,
   };
 }
 
