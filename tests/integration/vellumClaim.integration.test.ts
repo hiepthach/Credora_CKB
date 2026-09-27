@@ -16,24 +16,30 @@ import {
   issueCertificate,
   previewCertificateMint,
   clearCertificateCache,
+  DEFAULT_CREDORA_ISSUER_DID,
 } from '@/lib/credentials/issuer';
+import { CredoraCourseSchemaHash } from '@/lib/credentials/vellumClaim';
 import { createSpore } from '@ckb-ccc/spore';
 import { readClaims, writeClaim, parseClaimPayload } from '@usevellum/sdk';
 import type { CredentialSubject } from '@/types';
 
 // Mock @usevellum/sdk
-vi.mock('@usevellum/sdk', () => ({
-  readClaims: vi.fn().mockResolvedValue({ claims: [], invalid: [] }),
-  writeClaim: vi.fn().mockResolvedValue({
-    tx: {} as any,
-    claimId: '0x' + '1'.repeat(64),
-    outputIndex: 1,
-    issuerSource: { kind: 'output', outputIndex: 1 },
-    controllerInputIndex: 0,
-    built: { txHash: '0x' + 'a'.repeat(64) },
-  }),
-  parseClaimPayload: vi.fn(),
-}));
+vi.mock('@usevellum/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@usevellum/sdk')>();
+  return {
+    ...actual,
+    readClaims: vi.fn().mockResolvedValue({ claims: [], invalid: [] }),
+    writeClaim: vi.fn().mockResolvedValue({
+      tx: {} as any,
+      claimId: '0x' + '1'.repeat(64),
+      outputIndex: 1,
+      issuerSource: { kind: 'output', outputIndex: 1 },
+      controllerInputIndex: 0,
+      built: { txHash: '0x' + 'a'.repeat(64) },
+    }),
+    parseClaimPayload: vi.fn(),
+  };
+});
 
 // Mock @/lib/did for DID resolution
 vi.mock('@/lib/did', () => ({
@@ -69,7 +75,7 @@ describe('Vellum Claim Integration', () => {
   const testSporeId =
     '0x2222222222222222222222222222222222222222222222222222222222222222';
   const testTxHash = '0x' + 'a'.repeat(64);
-  const testDid = 'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
+  const testDid = 'did:ckb:qqstudentreceiver00000000000000000';
   const standardAddress =
     'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq';
 
@@ -225,6 +231,34 @@ describe('Vellum Claim Integration', () => {
       expect(mockTx.addOutput).toHaveBeenCalledTimes(1);
       expect(mockTx.outputs).toHaveLength(2);
     });
+
+    it('distinguishes issuerDid from subjectDid and passes recipient lock and schema hash to Claim Cell', async () => {
+      const mockSigner = createMockSigner();
+      const customIssuerDid = 'did:ckb:qqteacherissuerplatform000000000';
+
+      const result = await issueCertificate({
+        signer: mockSigner,
+        clusterId: testClusterId,
+        issuerName: 'Credora Academy',
+        subject: testSubjectWithDid,
+        withVellumClaim: true,
+        issuerDid: customIssuerDid,
+      });
+
+      expect(result.claimId).toBeDefined();
+      expect(mockTx.addOutput).toHaveBeenCalledTimes(1);
+      const [claimOutput] = mockTx.addOutput.mock.calls[0];
+
+      // Verify recipient lock was passed to the Claim Cell
+      expect(claimOutput.lock.codeHash).toBe(
+        '0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8',
+      );
+      // Verify Claim Type script has CredoraCourseSchemaHash in args
+      expect(claimOutput.type.args).toContain(CredoraCourseSchemaHash.slice(2));
+      // Verify issuerDid and subjectDid are distinct
+      expect(customIssuerDid).not.toBe(testSubjectWithDid.id);
+      expect(DEFAULT_CREDORA_ISSUER_DID).not.toBe(testSubjectWithDid.id);
+    });
   });
 
   describe('Scenario 2: Single-output flow', () => {
@@ -304,7 +338,7 @@ describe('Vellum Claim Integration', () => {
   });
 
   describe('Scenario 4: Preview integration', () => {
-    it('returns combined capacity (500 + 350 = 850 CKB) with claimCellCapacity: 350', async () => {
+    it('returns combined capacity with dynamic claimCellCapacity (>= 350 CKB)', async () => {
       const mockSigner = createMockSigner();
 
       const preview = await previewCertificateMint({
@@ -316,8 +350,8 @@ describe('Vellum Claim Integration', () => {
       });
 
       expect(preview.dobCellCapacity).toBe(500);
-      expect(preview.claimCellCapacity).toBe(350);
-      expect(preview.exactCapacity).toBe(850);
+      expect(preview.claimCellCapacity).toBe(401);
+      expect(preview.exactCapacity).toBe(901);
       expect(preview.sporeId).toBe(testSporeId);
     });
 
@@ -348,8 +382,24 @@ describe('Vellum Claim Integration', () => {
       });
 
       expect(preview.dobCellCapacity).toBe(500);
-      expect(preview.claimCellCapacity).toBe(350);
-      expect(preview.exactCapacity).toBe(850);
+      expect(preview.claimCellCapacity).toBe(401);
+      expect(preview.exactCapacity).toBe(901);
+    });
+
+    it('calculates claimCellCapacity dynamically when payload exceeds 350 CKB standard', async () => {
+      const mockSigner = createMockSigner();
+      const longIssuerName = 'Super Detailed Academy For Advanced Nervos CKB Architecture '.repeat(5);
+
+      const preview = await previewCertificateMint({
+        signer: mockSigner,
+        clusterId: testClusterId,
+        issuerName: longIssuerName,
+        subject: testSubjectWithDid,
+        withVellumClaim: true,
+      });
+
+      expect(preview.claimCellCapacity).toBeGreaterThan(350);
+      expect(preview.exactCapacity).toBe(500 + preview.claimCellCapacity!);
     });
   });
 

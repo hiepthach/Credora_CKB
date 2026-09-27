@@ -87,4 +87,80 @@ describe('VellumClaim', () => {
       expect(isValidCredoraCoursePayload(123 as unknown)).toBe(false);
     });
   });
+
+  describe('buildCredoraCoursePayload', () => {
+    it('sets issuer_did to config.issuerDid when provided and distinguishes from subjectDid', async () => {
+      const { buildCredoraCoursePayload, DEFAULT_CREDORA_ISSUER_DID } = await import(
+        '@/lib/credentials/vellumClaim'
+      );
+
+      const customIssuer = 'did:ckb:qqcustomissuerinstitution000';
+      const studentSubject = 'did:ckb:qqstudentreceiver0000000000';
+
+      const payload = buildCredoraCoursePayload({
+        sporeId: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        courseId: 'course-101',
+        subjectDid: studentSubject,
+        issuerDid: customIssuer,
+        issuerName: 'Web3 University',
+        issuedAt: 1700000000,
+        grade: 'A+',
+      });
+
+      expect(payload.issuer_did).toBe(customIssuer);
+      expect(payload.issuer_did).not.toBe(studentSubject);
+      expect(payload.course_id).toBe('course-101');
+      expect(payload.metadata.grade).toBe('A+');
+    });
+
+    it('falls back to DEFAULT_CREDORA_ISSUER_DID when issuerDid is omitted', async () => {
+      const { buildCredoraCoursePayload, DEFAULT_CREDORA_ISSUER_DID } = await import(
+        '@/lib/credentials/vellumClaim'
+      );
+
+      const studentSubject = 'did:ckb:qqstudentreceiver0000000000';
+
+      const payload = buildCredoraCoursePayload({
+        sporeId: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        courseId: 'course-101',
+        subjectDid: studentSubject,
+        issuerName: 'Web3 University',
+        issuedAt: 1700000000,
+      });
+
+      expect(payload.issuer_did).toBe(DEFAULT_CREDORA_ISSUER_DID);
+      expect(payload.issuer_did).not.toBe(studentSubject);
+    });
+  });
+
+  describe('createVellumClaimCell', () => {
+    it('creates Claim Cell with recipient lock, schema hash in type args, and encoded data', async () => {
+      const { createVellumClaimCell, CredoraCourseSchemaHash, DEFAULT_CREDORA_ISSUER_DID } =
+        await import('@/lib/credentials/vellumClaim');
+
+      const mockRecipientLock = {
+        codeHash: '0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8',
+        hashType: 'type' as const,
+        args: '0xabcdef',
+      };
+
+      const result = await createVellumClaimCell({
+        sporeId: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        courseId: 'course-101',
+        subjectDid: 'did:ckb:qqstudentreceiver0000000000',
+        issuerDid: 'did:ckb:qqcustomissuerinstitution000',
+        recipientLock: mockRecipientLock as any,
+        issuerName: 'Web3 Academy',
+        issuedAt: 1700000000,
+      });
+
+      expect(result.claimCellOutput).toBeDefined();
+      expect(result.claimCellOutput.capacity).toBe(BigInt(350_00000000));
+      expect(result.claimCellOutput.lock).toEqual(mockRecipientLock);
+      expect(result.claimCellOutput.type?.args).toContain(CredoraCourseSchemaHash.slice(2));
+      expect(result.claimCellData).toBeInstanceOf(Uint8Array);
+      expect(result.claimCellData.length).toBeGreaterThan(0);
+      expect(result.claimId).toMatch(/^claim_/);
+    });
+  });
 });

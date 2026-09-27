@@ -6,7 +6,9 @@ import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
 import { resolveRecipientInput } from '@/lib/did';
-import { createVellumClaimCell } from './vellumClaim';
+import { createVellumClaimCell, DEFAULT_CREDORA_ISSUER_DID } from './vellumClaim';
+
+export { DEFAULT_CREDORA_ISSUER_DID };
 
 export interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -19,6 +21,8 @@ export interface IssueCertificateParams {
   withVellumClaim?: boolean;
   /** Optional recipient DID, required if withVellumClaim is true and subject.id is not a DID */
   recipientDid?: string;
+  /** Optional issuer DID (Credora platform/teacher). Defaults to DEFAULT_CREDORA_ISSUER_DID */
+  issuerDid?: string;
 }
 
 export interface IssueCertificateResult {
@@ -153,10 +157,12 @@ export async function issueCertificate(
       let claimId: string | undefined;
 
       if (params.withVellumClaim && claimRecipientDid) {
+        const issuerDid = params.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
         const claimResult = await createVellumClaimCell({
           client: liveSigner.client,
-          issuerDid: claimRecipientDid,
+          issuerDid,
           subjectDid: claimRecipientDid,
+          recipientLock: recipientLockScript,
           sporeId: sporeId || certificateId,
           courseId:
             (subject as any).course?.id ||
@@ -222,6 +228,7 @@ export interface PreviewParams extends Omit<IssueCertificateParams, 'signer'> {
   signer?: unknown; // ccc.Signer in production
   withVellumClaim?: boolean;
   recipientDid?: string;
+  issuerDid?: string;
 }
 
 export interface PreviewResult {
@@ -239,7 +246,7 @@ export function estimateCredoraCoursePayloadSize(params: PreviewParams): number 
   const payload = {
     spore_id: '0x' + 'a'.repeat(64),
     course_id: 'course-001',
-    issuer_did: params.recipientDid || 'did:ckb:abc123',
+    issuer_did: params.issuerDid || DEFAULT_CREDORA_ISSUER_DID,
     issued_at: Date.now(),
     metadata: {
       course_name: params.issuerName || 'Course',
@@ -355,8 +362,8 @@ export async function previewCertificateMint(
   let claimCellCapacity: number | undefined;
 
   if (params.withVellumClaim) {
-    // Base capacity: 350 CKB standard estimate for Vellum Claim Cell
-    claimCellCapacity = 350;
+    const payloadBytes = estimateCredoraCoursePayloadSize(params);
+    claimCellCapacity = Math.max(350, 8 + 55 + 65 + payloadBytes);
   }
 
   const exactCapacity = dobCellCapacity + (claimCellCapacity || 0);

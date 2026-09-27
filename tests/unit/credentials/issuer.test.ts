@@ -922,6 +922,22 @@ describe('Certificate Service (Issuer)', () => {
       expect(result.exactCapacity).toBe(result.dobCellCapacity + result.claimCellCapacity!);
     });
 
+    it('should calculate dynamic claimCellCapacity when payload is large', async () => {
+      const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
+
+      const result = await previewCertificateMint({
+        signer: createMockSigner() as any,
+        clusterId: testClusterId,
+        issuerName: 'A Very Long Academy Name '.repeat(10),
+        subject: validSubject,
+        withVellumClaim: true,
+        recipientDid: 'did:ckb:abc123',
+      });
+
+      expect(result.claimCellCapacity).toBeGreaterThan(350);
+      expect(result.exactCapacity).toBe(500 + result.claimCellCapacity!);
+    });
+
     it('should return dobCellCapacity and exactCapacity without claimCellCapacity when withVellumClaim is false or undefined', async () => {
       const { previewCertificateMint } = await import('../../../src/lib/credentials/issuer');
 
@@ -1019,15 +1035,17 @@ describe('verifyCellDNA', () => {
     });
 
     // Test: Dual-output Spore DOB + Vellum Claim Cell
-    it('should create transaction with both DOB and Claim Cell outputs', async () => {
-      const { issueCertificate } = await import('../../../src/lib/credentials/issuer');
+    it('should create transaction with both DOB and Claim Cell outputs with distinct issuerDid and subjectDid', async () => {
+      const { issueCertificate, DEFAULT_CREDORA_ISSUER_DID } = await import('../../../src/lib/credentials/issuer');
 
+      const customIssuerDid = 'did:ckb:qqcustomissuerinstitution000';
       const result = await issueCertificate({
         signer: createMockSigner(),
         clusterId: testClusterId,
         issuerName: testIssuerName,
         subject: testSubjectWithDid,
         withVellumClaim: true,
+        issuerDid: customIssuerDid,
         recipientDid: 'did:ckb:abc123',
       });
 
@@ -1035,6 +1053,11 @@ describe('verifyCellDNA', () => {
       expect(result.sporeId).toBeDefined();
       expect(result.claimId).toBeDefined();
       expect(mockTx.addOutput).toHaveBeenCalled();
+      const [claimOutput] = mockTx.addOutput.mock.calls[0];
+      expect(claimOutput.lock).toBeDefined();
+      expect(claimOutput.type).toBeDefined();
+      expect(customIssuerDid).not.toBe(testSubjectWithDid.id);
+      expect(DEFAULT_CREDORA_ISSUER_DID).toBeDefined();
     });
 
     // Test: Issue certificate with Vellum Claim option (DID recipient via subject.id)

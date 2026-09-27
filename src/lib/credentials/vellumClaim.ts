@@ -6,6 +6,8 @@
  */
 
 import { ccc } from '@ckb-ccc/core';
+import { didToArgs } from '@ckb-ccc/did-ckb';
+import { ClaimData } from '@usevellum/sdk';
 import * as dagCbor from '@ipld/dag-cbor';
 
 // Schema hash for credora.course.v1
@@ -13,6 +15,12 @@ import * as dagCbor from '@ipld/dag-cbor';
 // For now, using a placeholder that will be replaced with the actual hash
 export const CredoraCourseSchemaHash =
   '0x7c5ed5e9a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2f6e4a1b8c3d2';
+
+export const DEFAULT_CREDORA_ISSUER_DID =
+  'did:ckb:qq2m72u8u6dxq2qru9w4f5m4h7x3z6k8u4n9p2r3s';
+
+export const VELLUM_CLAIM_TYPE_CODE_HASH =
+  '0x0000000000000000000000000000000000000000000000000000000000000001';
 
 export interface CredoraCourseMetadata {
   course_name: string;
@@ -106,10 +114,14 @@ export interface CreateVellumClaimConfig {
   sporeId: string;
   /** Course identifier */
   courseId: string;
-  /** The DID of the certificate holder (subject of the claim) */
+  /** The DID of the certificate holder (subject / student of the claim) */
   subjectDid?: string;
-  /** DID used as issuer/subject identifier in payload (alias for subjectDid) */
+  /** DID of the issuer (Credora platform/teacher). Defaults to DEFAULT_CREDORA_ISSUER_DID */
   issuerDid?: string;
+  /** Optional recipient lock script for the Claim Cell subject */
+  recipientLock?: ccc.Script;
+  /** Optional capacity in CKB */
+  capacity?: number;
   /** Name of the issuer */
   issuerName: string;
   /** Unix timestamp when certificate was issued */
@@ -126,11 +138,11 @@ export interface CreateVellumClaimConfig {
 export function buildCredoraCoursePayload(
   config: CreateVellumClaimConfig,
 ): CredoraCoursePayload {
-  const did = config.issuerDid || config.subjectDid || '';
+  const issuerDid = config.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
   return {
     spore_id: config.sporeId,
     course_id: config.courseId,
-    issuer_did: did,
+    issuer_did: issuerDid,
     issued_at: config.issuedAt,
     expires_at: config.expiresAt,
     metadata: {
@@ -178,37 +190,92 @@ export function encodeCredoraCoursePayload(
 }
 
 /**
+ * Helper to safely extract 20-byte issuer ID from DID
+ */
+function resolveIssuerId(issuerDid: string): `0x${string}` {
+  try {
+    return didToArgs(issuerDid);
+  } catch {
+    const hash = ccc.hashCkb(new TextEncoder().encode(issuerDid));
+    return ('0x' + hash.slice(2, 42)) as `0x${string}`;
+  }
+}
+
+/**
  * Create a Vellum Claim Cell output and data for inclusion as a dual-output
  */
 export async function createVellumClaimCell(
   config: CreateVellumClaimConfig,
 ): Promise<VellumClaimResult> {
-  const payload = buildCredoraCoursePayload(config);
+  const issuerDid = config.issuerDid || DEFAULT_CREDORA_ISSUER_DID;
+  const payload = buildCredoraCoursePayload({
+    ...config,
+    issuerDid,
+  });
 
   if (!isValidCredoraCoursePayload(payload)) {
     throw new Error('Invalid CredoraCoursePayload');
   }
 
-  const encodedPayload = encodeCredoraCoursePayload(payload);
+  // Encode with @usevellum/sdk ClaimData (Molecule V1 wrapping DAG-CBOR payload)
+  let claimCellData: Uint8Array;
+  try {
+    const issuerId = resolveIssuerId(issuerDid);
+    const nonce = ccc.hexFrom(crypto.getRandomValues(new Uint8Array(32)));
+    const claimData = ClaimData.fromV1({
+      issuerId,
+      nonce,
+      issuedAt: BigInt(payload.issued_at),
+      expiresAt: payload.expires_at ? BigInt(payload.expires_at) : undefined,
+      payload,
+    });
+    claimCellData = ccc.bytesFrom(claimData.toBytes());
+  } catch {
+    claimCellData = encodeCredoraCoursePayload(payload);
+  }
 
-  const emptyCodeHash = ('0x' + '00'.repeat(32)) as `0x${string}`;
+  // Lock script: recipient lock for the subject
+  const lock: ccc.Script = config.recipientLock ?? ({
+    codeHash: '0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8',
+    hashType: 'type',
+    args: '0x',
+  } as unknown as ccc.Script);
+
+  // Type script: Claim Type with CredoraCourseSchemaHash in args
+  let didCkbCodeHash = '0x' + '00'.repeat(32);
+  let didCkbHashType: ccc.HashType = 'type';
+  if (config.client && typeof config.client.getKnownScript === 'function') {
+    try {
+      const known = await config.client.getKnownScript(ccc.KnownScript.DidCkb);
+      didCkbCodeHash = known.codeHash;
+      didCkbHashType = known.hashType;
+    } catch {}
+  }
+
+  const didCodeHashHex = (didCkbCodeHash.startsWith('0x') ? didCkbCodeHash.slice(2) : didCkbCodeHash).padStart(64, '0');
+  const hashTypeHex = didCkbHashType === 'data' ? '00' : '01';
+  const schemaHashHex = CredoraCourseSchemaHash.startsWith('0x') ? CredoraCourseSchemaHash.slice(2) : CredoraCourseSchemaHash;
+  const claimTypeArgs = `0x${didCodeHashHex}${hashTypeHex}${schemaHashHex}` as `0x${string}`;
+
+  const claimType: ccc.Script = {
+    codeHash: VELLUM_CLAIM_TYPE_CODE_HASH,
+    hashType: 'type',
+    args: claimTypeArgs,
+  } as unknown as ccc.Script;
+
+  const capacityBigInt = config.capacity !== undefined
+    ? BigInt(Math.floor(config.capacity * 100_000_000))
+    : BigInt(350_00000000); // 350 CKB standard estimate
+
   const claimCellOutput: ccc.CellOutput = {
-    capacity: BigInt(350_00000000), // 350 CKB estimate
-    lock: {
-      codeHash: emptyCodeHash,
-      hashType: 'type',
-      args: '0x',
-    } as unknown as ccc.Script,
-    type: {
-      codeHash: emptyCodeHash,
-      hashType: 'type',
-      args: '0x',
-    } as unknown as ccc.Script,
+    capacity: capacityBigInt,
+    lock,
+    type: claimType,
   } as unknown as ccc.CellOutput;
 
   return {
     claimCellOutput,
-    claimCellData: encodedPayload,
+    claimCellData,
     claimId: `claim_${config.sporeId.slice(0, 16)}`,
   };
 }

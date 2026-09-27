@@ -45,6 +45,7 @@ export {
 // Vellum Claim Cell
 export {
   CredoraCourseSchemaHash,
+  DEFAULT_CREDORA_ISSUER_DID,
   type CredoraCoursePayload,
   isValidCredoraCoursePayload,
   createVellumClaimCell,
