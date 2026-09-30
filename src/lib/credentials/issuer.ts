@@ -140,7 +140,7 @@ export async function issueCertificate(
       );
 
       // Use CCC Spore SDK to create the certificate DOB cell
-      const { tx, id: sporeId } = await createSpore({
+      const { tx: sporeTx, id: sporeId } = await createSpore({
         signer: liveSigner,
         data: {
           contentType: 'application/json',
@@ -150,6 +150,8 @@ export async function issueCertificate(
         to: recipientLockScript,
         clusterMode: hasValidCluster ? 'clusterCell' : undefined,
       });
+
+      let tx = sporeTx;
 
       // After Spore creation, optionally add Claim Cell as dual-output
       let claimId: string | undefined;
@@ -178,6 +180,7 @@ export async function issueCertificate(
         });
 
         claimId = claimResult.claimId;
+        tx = claimResult.tx as ccc.Transaction;
       }
 
       await tx.completeInputsByCapacity(liveSigner);

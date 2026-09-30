@@ -285,6 +285,37 @@ describe('Vellum Claim Integration', () => {
       // Verify issuerDid and subjectDid are distinct
       expect(customIssuerDid).not.toBe(testSubjectWithDid.id);
     });
+
+    it('sends the updated transaction returned by writeClaim (cloned tx)', async () => {
+      const mockSigner = createMockSigner();
+      const updatedTx = {
+        ...mockTx,
+        completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+        completeFeeBy: vi.fn().mockResolvedValue(undefined),
+      };
+
+      vi.mocked(writeClaim).mockResolvedValueOnce({
+        tx: updatedTx as any,
+        claimId: 'claim_' + '2'.repeat(64),
+        outputIndex: 1,
+        issuerSource: { kind: 'output', outputIndex: 1 },
+        controllerInputIndex: 0,
+        built: { txHash: '0x' + 'b'.repeat(64) },
+      });
+
+      await issueCertificate({
+        signer: mockSigner,
+        clusterId: testClusterId,
+        issuerName: 'Credora Academy',
+        issuerDid: testIssuerDid,
+        subject: testSubjectWithDid,
+        withVellumClaim: true,
+      });
+
+      expect(updatedTx.completeInputsByCapacity).toHaveBeenCalledWith(mockSigner);
+      expect(updatedTx.completeFeeBy).toHaveBeenCalledWith(mockSigner, 1000);
+      expect(mockSigner.sendTransaction).toHaveBeenCalledWith(updatedTx);
+    });
   });
 
   describe('Scenario 2: Single-output flow', () => {

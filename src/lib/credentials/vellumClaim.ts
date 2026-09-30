@@ -196,20 +196,27 @@ export function buildCredoraCoursePayload(
   config: CreateVellumClaimConfig,
 ): CredoraCoursePayload {
   const issuerDid = config.issuerDid || '';
-  return {
+  const payload: CredoraCoursePayload = {
     spore_id: config.sporeId,
     course_id: config.courseId,
     issuer_did: issuerDid,
     issued_at: config.issuedAt,
-    expires_at: config.expiresAt,
     metadata: {
       course_name: config.issuerName,
       completion_date: new Date(config.issuedAt * 1000)
         .toISOString()
         .split('T')[0],
-      grade: config.grade,
     },
   };
+
+  if (config.expiresAt !== undefined) {
+    payload.expires_at = config.expiresAt;
+  }
+  if (config.grade !== undefined && config.grade !== '') {
+    payload.metadata.grade = config.grade;
+  }
+
+  return payload;
 }
 
 /**
@@ -383,7 +390,7 @@ export async function issueVellumClaimCell(
       subject: { did: params.claimRecipientDid },
       issuerDid: params.issuerDid,
       schemaHash: CredoraCourseSchemaHash,
-      payload,
+      payload: stripUndefined(payload),
       issuedAt: params.issuedAt,
       expiresAt: params.expiresAt,
     },
