@@ -43,6 +43,8 @@ interface GetCertificateResult {
   transactionHash?: string;
   clusterId?: string;
   sporeId?: string;
+  /** DID used for Vellum Claim Cell */
+  subjectDid?: string;
 }
 
 /**
@@ -190,7 +192,13 @@ export async function issueCertificate(
 
       // Save to cache for quick retrieval
       const primaryId = sporeId || certificateId;
-      certificateCache.set(primaryId, { certificate: dna, txHash, sporeId });
+      certificateCache.set(primaryId, {
+        certificate: dna,
+        txHash,
+        sporeId,
+        // Store the DID used for Claim Cell (different from credentialSubject.id which may be wallet address)
+        subjectDid: claimRecipientDid,
+      });
 
       return {
         certificateId: sporeId || certificateId,
@@ -428,6 +436,7 @@ export async function getCertificate(
       transactionHash: cached.txHash,
       clusterId: cached.certificate.issuer.id,
       sporeId: cached.sporeId,
+      subjectDid: cached.subjectDid,
     };
   }
 
@@ -445,6 +454,7 @@ export async function getCertificate(
         transactionHash: item.txHash,
         clusterId: item.certificate.issuer?.id,
         sporeId: item.sporeId,
+        subjectDid: item.subjectDid,
       };
     }
   }
@@ -1014,7 +1024,9 @@ export async function meltCertificate(
 
     // Also melt the associated Claim Cell if it exists
     let claimTxHash: string | undefined;
-    const subjectDid = certRecord?.certificate?.credentialSubject?.id || '';
+    // Use subjectDid from cache (stored during issue) - this is the DID used for Claim Cell
+    // NOT credentialSubject.id which may be a wallet address
+    const subjectDid = certRecord?.subjectDid || certRecord?.certificate?.credentialSubject?.id || '';
     if (subjectDid && finalSporeId) {
       try {
         const claimResult = await meltVellumClaim(

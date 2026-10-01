@@ -4,6 +4,8 @@ export interface CertificateStorageItem {
   certificate: CertificateDNA;
   txHash: string;
   sporeId?: string;
+  /** DID used for Vellum Claim Cell (stored separately from credentialSubject.id which may be a wallet address) */
+  subjectDid?: string;
 }
 
 /**
