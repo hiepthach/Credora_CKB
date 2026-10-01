@@ -5,7 +5,7 @@ import { isDidCkb } from '@ckb-ccc/did-ckb';
 import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
-import { resolveRecipientInput } from '@/lib/did';
+import { resolveRecipientInput, findDidByLock } from '@/lib/did';
 import { issueVellumClaimCell, findClaimBySporeId } from './vellumClaim';
 import { meltVellumClaim } from './meltClaim';
 
@@ -1027,7 +1027,29 @@ export async function meltCertificate(
     let claimTxHash: string | undefined;
     // Use subjectDid from cache (stored during issue) - this is the DID used for Claim Cell
     // NOT credentialSubject.id which may be a wallet address
-    const subjectDid = certRecord?.subjectDid || certRecord?.certificate?.credentialSubject?.id || '';
+    let subjectDid = certRecord?.subjectDid || '';
+
+    // Fallback: If subjectDid not in cache, try to resolve DID from the holder's address
+    // This handles certificates issued before the fix was deployed
+    if (!subjectDid && certRecord?.certificate?.credentialSubject?.id) {
+      const subjectId = certRecord.certificate.credentialSubject.id;
+      // Check if credentialSubject.id is actually a DID
+      if (subjectId.startsWith('did:ckb:')) {
+        subjectDid = subjectId;
+      }
+      // If it's a wallet address, try to find DID via lock script resolution
+      else {
+        try {
+          const resolvedDid = await findDidByLock(liveSigner.client, holderLock);
+          if (resolvedDid) {
+            subjectDid = resolvedDid;
+          }
+        } catch {
+          // Failed to resolve DID, skip Claim Cell melt
+        }
+      }
+    }
+
     if (subjectDid && finalSporeId) {
       try {
         const claimResult = await meltVellumClaim(
