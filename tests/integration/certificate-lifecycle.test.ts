@@ -5,6 +5,16 @@ import { verifyCertificate, isExpired } from '@/lib/credentials/verifier';
 import { encodeCertificateDNA } from '@/lib/credentials/encoder';
 import { decodeCertificateDNA } from '@/lib/credentials/decoder';
 
+// Mock @usevellum/sdk for Claim Cell tests
+vi.mock('@usevellum/sdk', () => ({
+  readClaims: vi.fn(() => ({ claims: [], invalid: [] })),
+}));
+
+// Mock meltClaim module directly
+vi.mock('@/lib/credentials/meltClaim', () => ({
+  meltVellumClaim: vi.fn().mockResolvedValue({ transactionHash: '0x' + 'claim'.repeat(16) }),
+}));
+
 // Generate consistent certificate IDs for mock data
 const CERTIFICATE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
 const SPORE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
@@ -134,5 +144,41 @@ describe('Certificate Lifecycle Integration', () => {
     // 4. Melt
     const meltRes = await meltCertificate(mockSigner, issueRes.certificateId);
     expect(meltRes.transactionHash).toBe('0xtxhash123456');
+  });
+
+  it('meltCertificate with Vellum Claim Cell returns claimTxHash', async () => {
+    const { certificateCache } = await import('@/lib/storage/cache');
+    const { meltVellumClaim } = await import('@/lib/credentials/meltClaim');
+
+    // Clear cache first
+    clearCertificateCache();
+
+    // Setup certificate in cache with subjectDid
+    const certWithDid = {
+      ...MOCK_CERTIFICATE_DNA,
+      credentialSubject: {
+        ...MOCK_CERTIFICATE_DNA.credentialSubject,
+        id: 'did:ckb:qqtestrecipient000000000000',
+      },
+    };
+    certificateCache.set(SPORE_ID, {
+      certificate: certWithDid as any,
+      txHash: '0xtxhash123456',
+      sporeId: SPORE_ID,
+      subjectDid: 'did:ckb:qqtestrecipient000000000000', // This is the key!
+    });
+
+    const meltRes = await meltCertificate(mockSigner, SPORE_ID);
+
+    // Should return both transaction hashes
+    expect(meltRes.transactionHash).toBe('0xtxhash123456');
+    expect(meltRes.claimTxHash).toBe('0x' + 'claim'.repeat(16));
+
+    // meltVellumClaim should have been called with correct params
+    expect(meltVellumClaim).toHaveBeenCalledWith(
+      mockSigner,
+      'did:ckb:qqtestrecipient000000000000',
+      SPORE_ID,
+    );
   });
 });

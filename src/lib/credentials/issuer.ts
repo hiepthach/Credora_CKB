@@ -859,6 +859,7 @@ export async function meltCertificate(
           transactionHash: item.txHash,
           clusterId: item.certificate.issuer?.id,
           sporeId: item.sporeId,
+          subjectDid: item.subjectDid,
         };
         break;
       }
