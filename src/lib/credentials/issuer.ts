@@ -6,7 +6,8 @@ import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
 import { resolveRecipientInput } from '@/lib/did';
-import { issueVellumClaimCell } from './vellumClaim';
+import { issueVellumClaimCell, findClaimBySporeId } from './vellumClaim';
+import { meltVellumClaim } from './meltClaim';
 
 export interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -812,6 +813,7 @@ export function verifyCellDNA(cellOutputData: Uint8Array | unknown, certRecord: 
 /**
  * Melt (destroy) a certificate cell to reclaim CKB capacity.
  * Only the certificate holder can melt their own certificate.
+ * Also melts associated Vellum Claim Cell if exists.
  *
  * @param signer - The holder's wallet signer (must be a live signer)
  * @param certificateId - The certificate ID or Spore ID to melt
@@ -819,7 +821,7 @@ export function verifyCellDNA(cellOutputData: Uint8Array | unknown, certRecord: 
 export async function meltCertificate(
   signer: unknown,
   certificateId: string
-): Promise<{ transactionHash: string }> {
+): Promise<{ transactionHash: string; claimTxHash?: string }> {
   // Fail-Fast: require live signer
   if (
     !signer ||
@@ -1010,7 +1012,23 @@ export async function meltCertificate(
     // Delete all collected keys
     keysToDelete.forEach((key) => certificateCache.delete(key));
 
-    return { transactionHash: meltTxHash };
+    // Also melt the associated Claim Cell if it exists
+    let claimTxHash: string | undefined;
+    const subjectDid = certRecord?.certificate?.credentialSubject?.id || '';
+    if (subjectDid && finalSporeId) {
+      try {
+        const claimResult = await meltVellumClaim(
+          liveSigner,
+          subjectDid,
+          finalSporeId,
+        );
+        claimTxHash = claimResult.transactionHash || undefined;
+      } catch {
+        // Claim Cell may not exist or already be melted - skip silently
+      }
+    }
+
+    return { transactionHash: meltTxHash, claimTxHash };
   } catch (err: any) {
     const msg = err?.message || String(err);
     if (msg.includes('Spore') && (msg.includes('not found') || msg.includes('notFound'))) {

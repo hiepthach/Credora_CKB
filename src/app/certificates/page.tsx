@@ -208,7 +208,10 @@ function CertificatesContent() {
     }
     try {
       setMeltingCertId(cert.certificateId);
-      await meltCertificate(signer, cert.certificateId);
+      const result = await meltCertificate(signer, cert.certificateId);
+
+      // Note: meltCertificate now also melts associated Vellum Claim Cell if exists
+      // result.claimTxHash will be set if a Claim Cell was also destroyed
 
       // Optimistically remove from certificates cache so it disappears immediately when returning to list
       queryClient.setQueryData(['certificates', address], (old: CertificateWithMeta[] | undefined) => {

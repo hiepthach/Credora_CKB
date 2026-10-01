@@ -7,7 +7,7 @@
 
 import { ccc } from '@ckb-ccc/core';
 import { didToArgs } from '@ckb-ccc/did-ckb';
-import { ClaimData, writeClaim } from '@usevellum/sdk';
+import { ClaimData, writeClaim, readClaims, type Claim } from '@usevellum/sdk';
 import * as dagCbor from '@ipld/dag-cbor';
 
 import {
@@ -407,4 +407,38 @@ export function estimatePayloadSize(
   payload: CredoraCoursePayload,
 ): number {
   return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
+
+/**
+ * Find a Claim Cell by its referenced Spore ID
+ */
+export async function findClaimBySporeId(params: {
+  client: ccc.Client;
+  subjectDid: string;
+  sporeId: string;
+  scripts?: ReturnType<typeof getVellumScriptConfig>;
+}): Promise<{ claim: Claim; outPoint: ccc.OutPoint } | null> {
+  const scripts = params.scripts || getVellumScriptConfig();
+
+  const result = await readClaims({
+    client: params.client,
+    scripts,
+    filter: {
+      subject: { did: params.subjectDid },
+      schemaHash: CredoraCourseSchemaHash,
+    },
+  });
+
+  for (const claim of result.claims) {
+    // Check if this claim references the target Spore ID
+    const payload = claim.payload as Record<string, unknown>;
+    if (payload?.spore_id === params.sporeId) {
+      return {
+        claim,
+        outPoint: claim.cell.outPoint,
+      };
+    }
+  }
+
+  return null;
 }

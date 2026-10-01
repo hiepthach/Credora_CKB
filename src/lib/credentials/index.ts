@@ -54,4 +54,8 @@ export {
   encodeCredoraCoursePayload,
   buildCredoraCoursePayload,
   estimatePayloadSize,
+  findClaimBySporeId,
 } from './vellumClaim';
+
+// Vellum Claim Cell Melt
+export { meltVellumClaim } from './meltClaim';
