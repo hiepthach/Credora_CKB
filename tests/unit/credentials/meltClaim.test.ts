@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ccc } from '@ckb-ccc/core';
-import { meltVellumClaim, meltVellumClaimWithCellDeps } from '@/lib/credentials/meltClaim';
+import { meltVellumClaim, meltVellumClaimWithCellDeps, buildAtomicMeltTransaction } from '@/lib/credentials/meltClaim';
 
 // Mock @usevellum/sdk at the top level
 vi.mock('@usevellum/sdk', () => ({
@@ -228,6 +228,49 @@ describe('MeltClaim', () => {
 
       expect(result.transactionHash).toBe('');
       expect(mockSigner.sendTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('buildAtomicMeltTransaction', () => {
+    it('should return null when no claim cell exists', async () => {
+      (readClaims as ReturnType<typeof vi.fn>).mockResolvedValue({
+        claims: [],
+        invalid: [],
+      });
+
+      const mockSigner = {
+        client: {
+          getKnownScript: vi.fn(),
+        },
+      } as unknown as ccc.Signer;
+
+      const targetSporeId = '0x' + 'ab'.repeat(32) as `0x${string}`;
+      const result = await buildAtomicMeltTransaction(
+        mockSigner,
+        targetSporeId,
+        'did:ckb:qqtest000',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when readClaims throws', async () => {
+      (readClaims as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
+
+      const mockSigner = {
+        client: {
+          getKnownScript: vi.fn(),
+        },
+      } as unknown as ccc.Signer;
+
+      const targetSporeId = '0x' + 'ab'.repeat(32) as `0x${string}`;
+      const result = await buildAtomicMeltTransaction(
+        mockSigner,
+        targetSporeId,
+        'did:ckb:qqtest000',
+      );
+
+      expect(result).toBeNull();
     });
   });
 });

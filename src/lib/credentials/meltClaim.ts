@@ -6,6 +6,7 @@
  */
 
 import { ccc } from '@ckb-ccc/core';
+import { meltSpore } from '@ckb-ccc/spore';
 import { findClaimBySporeId, getVellumScriptConfig } from './vellumClaim';
 
 /**
@@ -116,4 +117,71 @@ export async function meltVellumClaimWithCellDeps(
   const txHash = await signer.sendTransaction(tx);
 
   return { transactionHash: txHash };
+}
+
+/**
+ * Build an atomic melt transaction that destroys both Spore DOB and Claim Cell.
+ * Returns null if no Claim Cell exists (caller should use regular meltSpore).
+ *
+ * This combines the Spore melt inputs with the Claim Cell input into a single
+ * transaction for atomic destruction of both cells.
+ *
+ * @param signer - The holder's wallet signer
+ * @param sporeId - The Spore ID to melt
+ * @param subjectDid - The DID of the claim subject (used to find the Claim Cell)
+ * @returns Combined transaction or null if no Claim Cell exists
+ */
+export async function buildAtomicMeltTransaction(
+  signer: ccc.Signer,
+  sporeId: `0x${string}`,
+  subjectDid: string,
+): Promise<ccc.Transaction | null> {
+  // Find claim cell
+  let found;
+  try {
+    found = await findClaimBySporeId({
+      client: signer.client,
+      subjectDid,
+      sporeId,
+    });
+  } catch {
+    // Failed to find claim cell - return null for regular melt
+    return null;
+  }
+
+  if (!found) {
+    // No claim cell exists - return null for regular melt
+    return null;
+  }
+
+  // Get Claim Type cellDeps
+  const scripts = getVellumScriptConfig();
+  const cellDeps: ccc.CellDep[] = [];
+  if (scripts.claimType.cellDeps) {
+    for (const cd of scripts.claimType.cellDeps) {
+      cellDeps.push(ccc.CellDep.from(cd.cellDep));
+    }
+  }
+
+  // Melt Spore first to get base transaction
+  const { tx: sporeTx } = await meltSpore({ signer, id: sporeId });
+
+  // Add Claim Cell as input (no output = burn)
+  const claimInput = new ccc.CellInput(found.outPoint, BigInt(0));
+
+  // Combine: spore inputs + claim input, with Claim Type cellDeps
+  const combinedInputs = [...(sporeTx.inputs || []), claimInput];
+
+  // Create combined transaction
+  const combinedTx = new ccc.Transaction(
+    BigInt(0), // version
+    cellDeps, // Claim Type cellDeps
+    sporeTx.headerDeps || [], // headerDeps from spore melt
+    combinedInputs, // both spore and claim inputs
+    [], // no outputs = burn
+    [], // outputsData
+    [], // witnesses
+  );
+
+  return combinedTx;
 }
