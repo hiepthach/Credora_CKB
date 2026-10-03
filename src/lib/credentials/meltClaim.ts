@@ -6,12 +6,78 @@
  */
 
 import { ccc } from '@ckb-ccc/core';
+import { isDidCkb, resolveDidCkb } from '@ckb-ccc/did-ckb';
 import { meltSpore } from '@ckb-ccc/spore';
 import { findClaimBySporeId, getVellumScriptConfig } from './vellumClaim';
 
 export interface MeltVellumClaimOptions {
   /** Include Claim Type cellDeps for proper script execution */
   includeCellDeps?: boolean;
+}
+
+/**
+ * Collect all required CellDeps for validating a Vellum Claim Cell destruction:
+ * 1. Claim Type script cellDep (from Vellum deployment)
+ * 2. DID Lock script cellDep (from Vellum deployment)
+ * 3. Subject DID identity cellDep (if subjectDid is a did:ckb identifier)
+ */
+export async function collectVellumClaimCellDeps(
+  client: ccc.Client,
+  subjectDid: string,
+): Promise<ccc.CellDep[]> {
+  const scripts = getVellumScriptConfig();
+  const deps: ccc.CellDep[] = [];
+
+  // 1. Claim Type script cellDep
+  if (scripts.claimType.cellDeps) {
+    for (const cd of scripts.claimType.cellDeps) {
+      deps.push(ccc.CellDep.from(cd.cellDep));
+    }
+  }
+
+  // 2. DID Lock script cellDep (code_hash: 0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d)
+  if (scripts.didLock.cellDeps) {
+    for (const cd of scripts.didLock.cellDeps) {
+      deps.push(ccc.CellDep.from(cd.cellDep));
+    }
+  }
+
+  // 3. Subject DID identity cellDep (required by DID Lock script to verify controller)
+  if (isDidCkb(subjectDid)) {
+    try {
+      const didRecord = await resolveDidCkb({ client, did: subjectDid });
+      if (didRecord?.cell?.outPoint) {
+        deps.push(
+          ccc.CellDep.from({
+            outPoint: didRecord.cell.outPoint,
+            depType: 'code',
+          }),
+        );
+      }
+    } catch {
+      // Continue without DID cellDep if resolution fails
+    }
+  }
+
+  return deps;
+}
+
+/**
+ * Deduplicate cellDeps by outpoint (txHash + index) and depType.
+ */
+export function dedupCellDeps(cellDeps: ccc.CellDep[]): ccc.CellDep[] {
+  const seen = new Set<string>();
+  const result: ccc.CellDep[] = [];
+
+  for (const dep of cellDeps) {
+    const key = `${dep.outPoint.txHash.toLowerCase()}:${dep.outPoint.index.toString()}:${dep.depType}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(dep);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -49,7 +115,7 @@ export async function meltVellumClaim(
   const { outPoint } = found;
 
   // Build a burn transaction: input Claim Cell, no output
-  const input = new ccc.CellInput(outPoint, BigInt(0));
+  const input = new ccc.CellInput(ccc.OutPoint.from(outPoint), BigInt(0));
   const tx = new ccc.Transaction(
     BigInt(0), // version
     [], // cellDeps
@@ -71,8 +137,7 @@ export async function meltVellumClaim(
 }
 
 /**
- * Melt a Vellum Claim Cell with Claim Type cellDeps included.
- * This variant includes the Claim Type script cellDep for proper script execution.
+ * Melt a Vellum Claim Cell with Claim Type, DID Lock, and DID Identity cellDeps included.
  *
  * @param signer - The holder's wallet signer (must be a live signer)
  * @param subjectDid - The DID of the claim subject
@@ -98,20 +163,14 @@ export async function meltVellumClaimWithCellDeps(
 
   const { outPoint } = found;
 
-  // Get Claim Type cellDeps
-  const scripts = getVellumScriptConfig();
-  const cellDeps: ccc.CellDep[] = [];
-  if (scripts.claimType.cellDeps) {
-    for (const cd of scripts.claimType.cellDeps) {
-      cellDeps.push(ccc.CellDep.from(cd.cellDep));
-    }
-  }
+  const vellumDeps = await collectVellumClaimCellDeps(signer.client, subjectDid);
+  const cellDeps = dedupCellDeps(vellumDeps);
 
   // Build a burn transaction: input Claim Cell, no output, with cellDeps
-  const input = new ccc.CellInput(outPoint, BigInt(0));
+  const input = new ccc.CellInput(ccc.OutPoint.from(outPoint), BigInt(0));
   const tx = new ccc.Transaction(
     BigInt(0), // version
-    cellDeps, // cellDeps with Claim Type
+    cellDeps, // cellDeps with Claim Type, DID Lock, and DID cell
     [], // headerDeps
     [input], // inputs
     [], // outputs
@@ -164,33 +223,33 @@ export async function buildAtomicMeltTransaction(
     return null;
   }
 
-  // Get Claim Type cellDeps
-  const scripts = getVellumScriptConfig();
-  const cellDeps: ccc.CellDep[] = [];
-  if (scripts.claimType.cellDeps) {
-    for (const cd of scripts.claimType.cellDeps) {
-      cellDeps.push(ccc.CellDep.from(cd.cellDep));
-    }
-  }
+  // Collect Vellum cellDeps (Claim Type, DID Lock, and DID Identity cell)
+  const vellumDeps = await collectVellumClaimCellDeps(signer.client, subjectDid);
 
   // Melt Spore first to get base transaction
   const { tx: sporeTx } = await meltSpore({ signer, id: sporeId });
 
   // Add Claim Cell as input (no output = burn)
-  const claimInput = new ccc.CellInput(found.outPoint, BigInt(0));
+  const claimInput = new ccc.CellInput(ccc.OutPoint.from(found.outPoint), BigInt(0));
 
-  // Combine: spore inputs + claim input, with Claim Type cellDeps
+  // Combine: spore inputs + claim input
   const combinedInputs = [...(sporeTx.inputs || []), claimInput];
 
-  // Create combined transaction
+  // Merge and deduplicate cellDeps
+  const combinedCellDeps = dedupCellDeps([
+    ...(sporeTx.cellDeps || []),
+    ...vellumDeps,
+  ]);
+
+  // Create combined transaction preserving sporeTx cellDeps, headerDeps, witnesses (cobuild)
   const combinedTx = new ccc.Transaction(
-    BigInt(0), // version
-    cellDeps, // Claim Type cellDeps
+    sporeTx.version ?? BigInt(0), // version
+    combinedCellDeps, // combined cellDeps
     sporeTx.headerDeps || [], // headerDeps from spore melt
     combinedInputs, // both spore and claim inputs
-    [], // no outputs = burn
-    [], // outputsData
-    [], // witnesses
+    sporeTx.outputs || [], // outputs from spore melt (if any)
+    sporeTx.outputsData || [], // outputsData from spore melt (if any)
+    sporeTx.witnesses || [], // preserve witnesses (cobuild)
   );
 
   return combinedTx;
