@@ -9,6 +9,11 @@ import { ccc } from '@ckb-ccc/core';
 import { meltSpore } from '@ckb-ccc/spore';
 import { findClaimBySporeId, getVellumScriptConfig } from './vellumClaim';
 
+export interface MeltVellumClaimOptions {
+  /** Include Claim Type cellDeps for proper script execution */
+  includeCellDeps?: boolean;
+}
+
 /**
  * Melt a Vellum Claim Cell by consuming its outpoint.
  * The Claim Cell is destroyed by creating a transaction that has it as input
@@ -17,13 +22,18 @@ import { findClaimBySporeId, getVellumScriptConfig } from './vellumClaim';
  * @param signer - The holder's wallet signer (must be a live signer)
  * @param subjectDid - The DID of the claim subject
  * @param sporeId - The Spore ID referenced by the claim
+ * @param options - Optional configuration (e.g. include Claim Type cellDeps)
  * @returns Transaction hash (empty string if no claim to melt)
  */
 export async function meltVellumClaim(
   signer: ccc.Signer,
   subjectDid: string,
   sporeId: string,
+  options?: MeltVellumClaimOptions,
 ): Promise<{ transactionHash: string }> {
+  if (options?.includeCellDeps) {
+    return meltVellumClaimWithCellDeps(signer, subjectDid, sporeId);
+  }
   // Find the Claim Cell
   const found = await findClaimBySporeId({
     client: signer.client,

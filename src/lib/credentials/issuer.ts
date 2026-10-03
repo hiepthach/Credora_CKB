@@ -1004,8 +1004,7 @@ export async function meltCertificate(
   }
 
   try {
-    let meltTx: ccc.Transaction;
-    let usedAtomicMelt = false;
+    let meltTx: ccc.Transaction | null = null;
 
     // Try atomic melt: spore + claim in one transaction
     if (subjectDid && finalSporeId) {
@@ -1025,7 +1024,6 @@ export async function meltCertificate(
             await atomicTx.completeFeeBy(liveSigner, 1000);
           }
           meltTx = atomicTx;
-          usedAtomicMelt = true;
         }
       } catch {
         // Fallback to regular melt if atomic fails (claim may already be melted)
@@ -1033,7 +1031,7 @@ export async function meltCertificate(
     }
 
     // If not using atomic melt, use regular meltSpore
-    if (!usedAtomicMelt) {
+    if (!meltTx) {
       const { tx } = await meltSpore({
         signer: liveSigner,
         id: finalSporeId,
@@ -1046,6 +1044,10 @@ export async function meltCertificate(
         await tx.completeFeeBy(liveSigner, 1000);
       }
       meltTx = tx;
+    }
+
+    if (!meltTx) {
+      throw new Error('Failed to build melt transaction');
     }
 
     const meltTxHash = await liveSigner.sendTransaction(meltTx);

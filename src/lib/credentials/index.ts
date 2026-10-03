@@ -58,4 +58,9 @@ export {
 } from './vellumClaim';
 
 // Vellum Claim Cell Melt
-export { meltVellumClaim } from './meltClaim';
+export {
+  meltVellumClaim,
+  meltVellumClaimWithCellDeps,
+  buildAtomicMeltTransaction,
+  type MeltVellumClaimOptions,
+} from './meltClaim';
