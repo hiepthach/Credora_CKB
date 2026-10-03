@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { meltVellumClaim } from '@/lib/credentials/meltClaim';
+import { ccc } from '@ckb-ccc/core';
+import { meltVellumClaim, meltVellumClaimWithCellDeps } from '@/lib/credentials/meltClaim';
 
 // Mock @usevellum/sdk at the top level
 vi.mock('@usevellum/sdk', () => ({
@@ -194,6 +195,32 @@ describe('MeltClaim', () => {
       } as any;
 
       const result = await meltVellumClaim(
+        mockSigner,
+        'did:ckb:qqtest000',
+        '0x' + 'ab'.repeat(32)
+      );
+
+      expect(result.transactionHash).toBe('');
+      expect(mockSigner.sendTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('meltVellumClaimWithCellDeps', () => {
+    it('should return empty hash when no claim exists', async () => {
+      (readClaims as ReturnType<typeof vi.fn>).mockResolvedValue({
+        claims: [],
+        invalid: [],
+      });
+
+      const mockSigner = {
+        client: {
+          getLiveCells: vi.fn(),
+          getKnownScript: vi.fn(),
+        },
+        sendTransaction: vi.fn(),
+      } as any;
+
+      const result = await meltVellumClaimWithCellDeps(
         mockSigner,
         'did:ckb:qqtest000',
         '0x' + 'ab'.repeat(32)
