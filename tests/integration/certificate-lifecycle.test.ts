@@ -5,6 +5,18 @@ import { verifyCertificate, isExpired } from '@/lib/credentials/verifier';
 import { encodeCertificateDNA } from '@/lib/credentials/encoder';
 import { decodeCertificateDNA } from '@/lib/credentials/decoder';
 
+// Mock @usevellum/sdk for Claim Cell tests
+vi.mock('@usevellum/sdk', () => ({
+  readClaims: vi.fn(() => ({ claims: [], invalid: [] })),
+}));
+
+// Mock meltClaim module directly
+vi.mock('@/lib/credentials/meltClaim', () => ({
+  meltVellumClaim: vi.fn().mockResolvedValue({ transactionHash: '0x' + 'claim'.repeat(16) }),
+  meltVellumClaimWithCellDeps: vi.fn().mockResolvedValue({ transactionHash: '0x' + 'claim'.repeat(16) }),
+  buildAtomicMeltTransaction: vi.fn(),
+}));
+
 // Generate consistent certificate IDs for mock data
 const CERTIFICATE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
 const SPORE_ID = '0x11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff';
@@ -134,5 +146,75 @@ describe('Certificate Lifecycle Integration', () => {
     // 4. Melt
     const meltRes = await meltCertificate(mockSigner, issueRes.certificateId);
     expect(meltRes.transactionHash).toBe('0xtxhash123456');
+  });
+
+  it('meltCertificate should use atomic transaction when claim exists', async () => {
+    const { certificateCache } = await import('@/lib/storage/cache');
+    const { buildAtomicMeltTransaction } = await import('@/lib/credentials/meltClaim');
+    const { meltSpore } = await import('@ckb-ccc/spore');
+
+    // Clear cache first
+    clearCertificateCache();
+
+    // Setup: certificate WITH claim cell
+    const certWithDid = {
+      ...MOCK_CERTIFICATE_DNA,
+      credentialSubject: {
+        ...MOCK_CERTIFICATE_DNA.credentialSubject,
+        id: 'did:ckb:qqtestrecipient',
+      },
+    };
+    certificateCache.set(SPORE_ID, {
+      certificate: certWithDid as any,
+      txHash: '0xtxhash123456',
+      sporeId: SPORE_ID,
+      subjectDid: 'did:ckb:qqtestrecipient',
+    });
+
+    const mockAtomicTx = {
+      completeInputsByCapacity: vi.fn().mockResolvedValue(undefined),
+      completeFeeBy: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.mocked(buildAtomicMeltTransaction).mockImplementation(async (signer, sporeId, _subjectDid) => {
+      await meltSpore({ signer, id: sporeId });
+      return mockAtomicTx as any;
+    });
+
+    // Melt should succeed
+    const result = await meltCertificate(mockSigner, SPORE_ID);
+    expect(result.transactionHash).toBeDefined();
+
+    // Verify atomic transaction was built and sent
+    expect(buildAtomicMeltTransaction).toHaveBeenCalledWith(
+      mockSigner,
+      SPORE_ID,
+      'did:ckb:qqtestrecipient',
+    );
+    expect(meltSpore).toHaveBeenCalledWith(
+      expect.objectContaining({ id: SPORE_ID }),
+    );
+  });
+
+  it('meltCertificate should work without claim cell (backward compat)', async () => {
+    const { certificateCache } = await import('@/lib/storage/cache');
+    const { meltSpore } = await import('@ckb-ccc/spore');
+
+    // Clear cache first
+    clearCertificateCache();
+
+    // Setup: certificate WITHOUT claim cell
+    certificateCache.set(SPORE_ID, {
+      certificate: MOCK_CERTIFICATE_DNA as any,
+      txHash: '0xtxhash123456',
+      sporeId: SPORE_ID,
+      // No subjectDid
+    });
+
+    // Melt should still work
+    const result = await meltCertificate(mockSigner, SPORE_ID);
+    expect(result.transactionHash).toBeDefined();
+    expect(meltSpore).toHaveBeenCalledWith(
+      expect.objectContaining({ id: SPORE_ID }),
+    );
   });
 });

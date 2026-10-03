@@ -53,7 +53,7 @@ vi.mock('@usevellum/sdk', async (importOriginal) => {
       }
       return {
         tx: props?.tx ?? {},
-        claimId: 'claim_' + '1'.repeat(64),
+        claimId: '0x' + '1'.repeat(64),
         outputIndex: 1,
         issuerSource: { kind: 'output', outputIndex: 1 },
         controllerInputIndex: 0,
@@ -217,7 +217,7 @@ describe('Vellum Claim Integration', () => {
       expect(result.certificateId).toBe(testSporeId);
       expect(result.transactionHash).toBe(testTxHash);
       expect(result.claimId).toBeDefined();
-      expect(result.claimId).toMatch(/^claim_/);
+      expect(result.claimId).toMatch(/^0x[0-9a-f]{64}$/);
 
       // Verify tx.addOutput was called with Claim Cell output (capacity 350 CKB) and data
       expect(mockTx.addOutput).toHaveBeenCalledTimes(1);
@@ -296,11 +296,10 @@ describe('Vellum Claim Integration', () => {
 
       vi.mocked(writeClaim).mockResolvedValueOnce({
         tx: updatedTx as any,
-        claimId: 'claim_' + '2'.repeat(64),
+        claimId: `0x${'2'.repeat(64)}` as `0x${string}`,
         outputIndex: 1,
         issuerSource: { kind: 'output', outputIndex: 1 },
         controllerInputIndex: 0,
-        built: { txHash: '0x' + 'b'.repeat(64) },
       });
 
       await issueCertificate({

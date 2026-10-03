@@ -5,8 +5,9 @@ import { isDidCkb } from '@ckb-ccc/did-ckb';
 import type { CertificateDNA, CredentialSubject } from '@/types';
 import { encodeCertificateDNA, generateCertificateId, serializeDNA } from './encoder';
 import { certificateCache } from '@/lib/storage';
-import { resolveRecipientInput } from '@/lib/did';
+import { resolveRecipientInput, findDidByLock } from '@/lib/did';
 import { issueVellumClaimCell } from './vellumClaim';
+import { buildAtomicMeltTransaction } from './meltClaim';
 
 export interface IssueCertificateParams {
   signer: unknown; // ccc.Signer in production
@@ -42,6 +43,8 @@ interface GetCertificateResult {
   transactionHash?: string;
   clusterId?: string;
   sporeId?: string;
+  /** DID used for Vellum Claim Cell */
+  subjectDid?: string;
 }
 
 /**
@@ -189,7 +192,13 @@ export async function issueCertificate(
 
       // Save to cache for quick retrieval
       const primaryId = sporeId || certificateId;
-      certificateCache.set(primaryId, { certificate: dna, txHash, sporeId });
+      certificateCache.set(primaryId, {
+        certificate: dna,
+        txHash,
+        sporeId,
+        // Store the DID used for Claim Cell (different from credentialSubject.id which may be wallet address)
+        subjectDid: claimRecipientDid,
+      });
 
       return {
         certificateId: sporeId || certificateId,
@@ -427,6 +436,7 @@ export async function getCertificate(
       transactionHash: cached.txHash,
       clusterId: cached.certificate.issuer.id,
       sporeId: cached.sporeId,
+      subjectDid: cached.subjectDid,
     };
   }
 
@@ -444,6 +454,7 @@ export async function getCertificate(
         transactionHash: item.txHash,
         clusterId: item.certificate.issuer?.id,
         sporeId: item.sporeId,
+        subjectDid: item.subjectDid,
       };
     }
   }
@@ -812,6 +823,7 @@ export function verifyCellDNA(cellOutputData: Uint8Array | unknown, certRecord: 
 /**
  * Melt (destroy) a certificate cell to reclaim CKB capacity.
  * Only the certificate holder can melt their own certificate.
+ * Also melts associated Vellum Claim Cell if exists.
  *
  * @param signer - The holder's wallet signer (must be a live signer)
  * @param certificateId - The certificate ID or Spore ID to melt
@@ -819,7 +831,7 @@ export function verifyCellDNA(cellOutputData: Uint8Array | unknown, certRecord: 
 export async function meltCertificate(
   signer: unknown,
   certificateId: string
-): Promise<{ transactionHash: string }> {
+): Promise<{ transactionHash: string; claimTxHash?: string }> {
   // Fail-Fast: require live signer
   if (
     !signer ||
@@ -847,6 +859,7 @@ export async function meltCertificate(
           transactionHash: item.txHash,
           clusterId: item.certificate.issuer?.id,
           sporeId: item.sporeId,
+          subjectDid: item.subjectDid,
         };
         break;
       }
@@ -964,20 +977,80 @@ export async function meltCertificate(
 
   const finalSporeId = targetSporeId;
 
-  try {
-    // Use CCC Spore to build the melt transaction
-    const { tx } = await meltSpore({
-      signer: liveSigner,
-      id: finalSporeId,
-    });
+  // Resolve subjectDid for Claim Cell melt
+  // Use subjectDid from cache (stored during issue) - this is the DID used for Claim Cell
+  // NOT credentialSubject.id which may be a wallet address
+  let subjectDid = certRecord?.subjectDid || '';
 
-    if (tx && typeof tx.completeInputsByCapacity === 'function') {
-      await tx.completeInputsByCapacity(liveSigner);
+  // Fallback: If subjectDid not in cache, try to resolve DID from the holder's address
+  // This handles certificates issued before the fix was deployed
+  if (!subjectDid && certRecord?.certificate?.credentialSubject?.id) {
+    const subjectId = certRecord.certificate.credentialSubject.id;
+    // Check if credentialSubject.id is actually a DID
+    if (subjectId.startsWith('did:ckb:')) {
+      subjectDid = subjectId;
     }
-    if (tx && typeof tx.completeFeeBy === 'function') {
-      await tx.completeFeeBy(liveSigner, 1000);
+    // If it's a wallet address, try to find DID via lock script resolution
+    else {
+      try {
+        const resolvedDid = await findDidByLock(liveSigner.client, holderLock);
+        if (resolvedDid) {
+          subjectDid = resolvedDid;
+        }
+      } catch {
+        // Failed to resolve DID, skip Claim Cell melt
+      }
     }
-    const meltTxHash = await liveSigner.sendTransaction(tx);
+  }
+
+  try {
+    let meltTx: ccc.Transaction | null = null;
+
+    // Try atomic melt: spore + claim in one transaction
+    if (subjectDid && finalSporeId) {
+      try {
+        const atomicTx = await buildAtomicMeltTransaction(
+          liveSigner,
+          finalSporeId,
+          subjectDid,
+        );
+
+        if (atomicTx) {
+          // Complete and send atomic transaction
+          if (typeof (atomicTx as any).completeInputsByCapacity === 'function') {
+            await atomicTx.completeInputsByCapacity(liveSigner);
+          }
+          if (typeof (atomicTx as any).completeFeeBy === 'function') {
+            await atomicTx.completeFeeBy(liveSigner, 1000);
+          }
+          meltTx = atomicTx;
+        }
+      } catch {
+        // Fallback to regular melt if atomic fails (claim may already be melted)
+      }
+    }
+
+    // If not using atomic melt, use regular meltSpore
+    if (!meltTx) {
+      const { tx } = await meltSpore({
+        signer: liveSigner,
+        id: finalSporeId,
+      });
+
+      if (tx && typeof tx.completeInputsByCapacity === 'function') {
+        await tx.completeInputsByCapacity(liveSigner);
+      }
+      if (tx && typeof tx.completeFeeBy === 'function') {
+        await tx.completeFeeBy(liveSigner, 1000);
+      }
+      meltTx = tx;
+    }
+
+    if (!meltTx) {
+      throw new Error('Failed to build melt transaction');
+    }
+
+    const meltTxHash = await liveSigner.sendTransaction(meltTx);
 
     // Remove from cache - collect keys first, then delete (avoid modifying while iterating)
     const keysToDelete: string[] = [
