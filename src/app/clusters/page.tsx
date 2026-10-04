@@ -212,8 +212,8 @@ export default function ClustersPage() {
           loading={createMutation.isPending}
         />
         {createMutation.isError && (
-          <div className="mt-4 p-3 bg-red-950/40 border border-red-800/40 rounded-xl">
-            <p className="text-sm text-red-400">{createMutation.error?.message}</p>
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 rounded-xl">
+            <p className="text-sm font-medium text-red-700 dark:text-red-400">{createMutation.error?.message}</p>
             {(createMutation.error?.message || '').includes('faucet') && (
               <a
                 href="https://faucet.nervos.org"
@@ -366,8 +366,8 @@ export default function ClustersPage() {
       )}
 
       {error && (
-        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
-          <p className="text-sm text-red-400">Failed to load institutions: {String(error)}</p>
+        <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 rounded-xl">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Failed to load institutions: {String(error)}</p>
         </div>
       )}
     </div>

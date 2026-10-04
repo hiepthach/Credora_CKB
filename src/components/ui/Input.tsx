@@ -27,7 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className="block text-sm font-medium text-ash-veil"
           >
             {label}
-            {props.required && <span className="text-red-400 ml-1">*</span>}
+            {props.required && <span className="text-red-500 dark:text-red-400 ml-1">*</span>}
           </label>
         )}
         <input
@@ -48,7 +48,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           onChange={handleChange}
           {...props}
         />
-        {error && <p className="text-sm text-red-400 animate-fade-in">{error}</p>}
+        {error && <p className="text-sm font-medium text-red-600 dark:text-red-400 animate-fade-in">{error}</p>}
         {helperText && !error && (
           <p className="text-sm text-ash-veil">{helperText}</p>
         )}

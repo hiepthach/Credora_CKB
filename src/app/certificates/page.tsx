@@ -453,8 +453,8 @@ function CertificatesContent() {
       />
 
       {error && (
-        <div className="p-4 bg-red-950/40 border border-red-800/40 rounded-xl">
-          <p className="text-sm text-red-400">Failed to load certificates: {String(error)}</p>
+        <div className="p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 rounded-xl">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Failed to load certificates: {String(error)}</p>
         </div>
       )}
     </div>

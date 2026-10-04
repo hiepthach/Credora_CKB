@@ -418,9 +418,9 @@ export function CertificateForm({
             </div>
           )}
           {resolveError && (
-            <div className="flex items-center gap-2 mt-2 p-2 bg-red-500/10 rounded-lg border border-red-500/30">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-400">
+            <div className="flex items-center gap-2 mt-2 p-2 bg-red-50 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/30">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span className="text-sm font-medium text-red-700 dark:text-red-400">
                 {resolveError}
               </span>
             </div>
@@ -755,9 +755,6 @@ export function CertificateForm({
             onChange={(e) => updateField('customTitle', e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl bg-midnight-plum border border-fog-line/15 text-bone-white placeholder-mid-ash text-sm focus:outline-none focus:ring-2 focus:ring-lavender-spark/40 focus:border-lavender-spark/50 transition-all duration-200"
           />
-          <p className="text-[11px] text-mid-ash">
-            Optional custom headline for the certificate (e.g. &quot;HONORARY DIPLOMA&quot;, &quot;CERTIFICATE OF ACHIEVEMENT&quot;)
-          </p>
         </div>
       </div>
 
