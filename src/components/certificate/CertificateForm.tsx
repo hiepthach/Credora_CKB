@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button, Input } from '@/components/ui';
 import type { CertificateLayout, CertificateTheme } from '@/types';
 import { ArrowRight, Palette, Layout as LayoutIcon, Sparkles, Loader2, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
@@ -30,6 +30,7 @@ export interface CertificateData {
 interface CertificateFormProps {
   clusterId: string;
   clusterName: string;
+  clusterIssuerDid?: string;
   defaultRecipientAddress?: string;
   defaultLayout?: CertificateLayout;
   defaultTheme?: CertificateTheme;
@@ -63,6 +64,7 @@ const THEME_OPTIONS: { id: CertificateTheme; label: string; color: string }[] = 
 export function CertificateForm({
   clusterId,
   clusterName,
+  clusterIssuerDid,
   defaultRecipientAddress,
   defaultLayout = 'classic',
   defaultTheme = 'blue',
@@ -89,17 +91,37 @@ export function CertificateForm({
       : detectedIssuerDid
       ? [detectedIssuerDid]
       : [];
-  const [selectedIssuerDid, setSelectedIssuerDid] = useState<string>('');
 
+  const isClusterDidOwned = Boolean(clusterIssuerDid && availableIssuerDids.includes(clusterIssuerDid));
+  const isClusterDidMismatch = Boolean(clusterIssuerDid && availableIssuerDids.length > 0 && !isClusterDidOwned);
+
+  const [selectedIssuerDid, setSelectedIssuerDid] = useState<string>(() => {
+    if (clusterIssuerDid && availableIssuerDids.includes(clusterIssuerDid)) {
+      return clusterIssuerDid;
+    }
+    return availableIssuerDids[0] || '';
+  });
+
+  const prevClusterIssuerDidRef = useRef(clusterIssuerDid);
   useEffect(() => {
+    if (prevClusterIssuerDidRef.current !== clusterIssuerDid) {
+      prevClusterIssuerDidRef.current = clusterIssuerDid;
+      if (clusterIssuerDid && availableIssuerDids.includes(clusterIssuerDid)) {
+        setSelectedIssuerDid(clusterIssuerDid);
+        return;
+      }
+    }
+
     if (availableIssuerDids.length > 0) {
-      if (!selectedIssuerDid || !availableIssuerDids.includes(selectedIssuerDid)) {
+      if (clusterIssuerDid && availableIssuerDids.includes(clusterIssuerDid) && (!selectedIssuerDid || !availableIssuerDids.includes(selectedIssuerDid))) {
+        setSelectedIssuerDid(clusterIssuerDid);
+      } else if (!selectedIssuerDid || !availableIssuerDids.includes(selectedIssuerDid)) {
         setSelectedIssuerDid(availableIssuerDids[0]);
       }
     } else {
       setSelectedIssuerDid('');
     }
-  }, [availableIssuerDids, selectedIssuerDid]);
+  }, [availableIssuerDids, clusterIssuerDid, selectedIssuerDid]);
 
   const activeIssuerDid =
     selectedIssuerDid || (availableIssuerDids.length > 0 ? availableIssuerDids[0] : undefined);
@@ -486,40 +508,53 @@ export function CertificateForm({
                     </span>
                   </div>
                   {addToVellum && (
-                    availableIssuerDids.length > 1 ? (
-                      <div className="space-y-1.5 p-3 rounded-xl bg-midnight-plum/70 border border-lavender-spark/30">
-                        <label htmlFor="issuerDidSelect" className="block text-xs font-medium text-ash-veil">
-                          Select Issuer DID
-                        </label>
-                        <select
-                          id="issuerDidSelect"
-                          aria-label="Select Issuer DID"
-                          value={activeIssuerDid}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setSelectedIssuerDid(val);
-                            notifyChange(formData, skillsInput, addToVellum, val);
-                          }}
-                          className="w-full px-3 py-2 rounded-lg bg-midnight border border-fog-line/20 text-bone-white font-mono text-xs focus:ring-2 focus:ring-lavender-spark/40 focus:outline-none"
-                        >
-                          {availableIssuerDids.map((did) => (
-                            <option key={did} value={did}>
-                              {did}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[11px] text-mid-ash">
-                          Your wallet owns {availableIssuerDids.length} DIDs. Select the authority to issue under.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs text-lavender-spark bg-lavender-spark/10 p-2.5 rounded-lg border border-lavender-spark/20">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>
-                          Issuer DID: <strong className="font-mono text-bone-white">{activeIssuerDid}</strong> (Detected from connected wallet)
-                        </span>
-                      </div>
-                    )
+                    <>
+                      {isClusterDidMismatch && (
+                        <div className="flex items-start gap-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs">
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-300">Institution DID mismatch</p>
+                            <p className="mt-0.5 text-amber-200/80">
+                              This institution is bound to <span className="font-mono text-bone-white">{clusterIssuerDid}</span>, but your connected wallet is not its controller.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {availableIssuerDids.length > 1 ? (
+                        <div className="space-y-1.5 p-3 rounded-xl bg-midnight-plum/70 border border-lavender-spark/30">
+                          <label htmlFor="issuerDidSelect" className="block text-xs font-medium text-ash-veil">
+                            Select Issuer DID
+                          </label>
+                          <select
+                            id="issuerDidSelect"
+                            aria-label="Select Issuer DID"
+                            value={activeIssuerDid}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setSelectedIssuerDid(val);
+                              notifyChange(formData, skillsInput, addToVellum, val);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg bg-midnight border border-fog-line/20 text-bone-white font-mono text-xs focus:ring-2 focus:ring-lavender-spark/40 focus:outline-none"
+                          >
+                            {availableIssuerDids.map((did) => (
+                              <option key={did} value={did}>
+                                {did}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[11px] text-mid-ash">
+                            Your wallet owns {availableIssuerDids.length} DIDs. Select the authority to issue under.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs text-lavender-spark bg-lavender-spark/10 p-2.5 rounded-lg border border-lavender-spark/20">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>
+                            Issuer DID: <strong className="font-mono text-bone-white">{activeIssuerDid}</strong> (Detected from connected wallet)
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (
