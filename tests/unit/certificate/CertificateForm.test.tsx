@@ -11,7 +11,9 @@ const defaultMockWallet = {
   isLoadingAddress: false,
   open: vi.fn(),
   issuerDid: 'did:ckb:qqtestissuer0000000000000',
+  issuerDids: ['did:ckb:qqtestissuer0000000000000'],
   isLoadingIssuerDid: false,
+  isLoadingIssuerDids: false,
 };
 
 // Mock useWallet hook
@@ -436,5 +438,97 @@ describe('CertificateForm Vellum Claim Cell Toggle', () => {
     expect(screen.getByText(/Checking issuer DID on CKB.../i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Add to Vellum \(Claim Cell\)/i)).not.toBeInTheDocument();
   });
+
+  it('renders a dropdown selector when connected wallet has multiple DIDs and updates selection', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDid: 'did:ckb:qqfirstdid00000000000000',
+      issuerDids: [
+        'did:ckb:qqfirstdid00000000000000',
+        'did:ckb:qqseconddid0000000000000',
+      ],
+      isLoadingIssuerDid: false,
+      isLoadingIssuerDids: false,
+    } as any);
+
+    const handleSubmit = vi.fn();
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={handleSubmit}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    const selectDropdown = screen.getByRole('combobox', { name: /Select Issuer DID/i }) as HTMLSelectElement;
+    expect(selectDropdown).toBeInTheDocument();
+    expect(screen.getByText(/did:ckb:qqfirstdid00000000000000/i)).toBeInTheDocument();
+    expect(screen.getByText(/did:ckb:qqseconddid0000000000000/i)).toBeInTheDocument();
+
+    // Switch selection to second DID
+    fireEvent.change(selectDropdown, {
+      target: { value: 'did:ckb:qqseconddid0000000000000' },
+    });
+    expect(selectDropdown.value).toBe('did:ckb:qqseconddid0000000000000');
+
+    // Fill required fields & submit
+    fireEvent.change(screen.getByPlaceholderText(/Student name/i), {
+      target: { value: 'Alice Nakamoto' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Course or program/i), {
+      target: { value: 'Nervos Architecture' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /Mint Certificate|Mint Spore/i });
+    fireEvent.click(submitBtn);
+
+    expect(handleSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        withVellumClaim: true,
+        issuerDid: 'did:ckb:qqseconddid0000000000000',
+      })
+    );
+  });
+
+  it('renders onboarding guidance CTA link when connected wallet has 0 DIDs', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDid: null,
+      issuerDids: [],
+      isLoadingIssuerDid: false,
+      isLoadingIssuerDids: false,
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Issuer DID required for Vellum/i)).toBeInTheDocument();
+    const ctaLink = screen.getByRole('link', { name: /Register did:ckb on Vellum/i });
+    expect(ctaLink).toBeInTheDocument();
+    expect(ctaLink).toHaveAttribute('href', 'https://dashboard.usevellum.xyz');
+  });
 });
+
 

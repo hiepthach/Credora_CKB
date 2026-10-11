@@ -78,8 +78,32 @@ export function CertificateForm({
     signer,
     address: connectedAddress,
     issuerDid: detectedIssuerDid,
+    issuerDids = [],
     isLoadingIssuerDid,
+    isLoadingIssuerDids,
   } = useWallet();
+
+  const availableIssuerDids =
+    issuerDids.length > 0
+      ? issuerDids
+      : detectedIssuerDid
+      ? [detectedIssuerDid]
+      : [];
+  const [selectedIssuerDid, setSelectedIssuerDid] = useState<string>('');
+
+  useEffect(() => {
+    if (availableIssuerDids.length > 0) {
+      if (!selectedIssuerDid || !availableIssuerDids.includes(selectedIssuerDid)) {
+        setSelectedIssuerDid(availableIssuerDids[0]);
+      }
+    } else {
+      setSelectedIssuerDid('');
+    }
+  }, [availableIssuerDids, selectedIssuerDid]);
+
+  const activeIssuerDid =
+    selectedIssuerDid || (availableIssuerDids.length > 0 ? availableIssuerDids[0] : undefined);
+
   const [resolvedInfo, setResolvedInfo] = useState<{
     address: string;
     isDid: boolean;
@@ -171,17 +195,18 @@ export function CertificateForm({
   const notifyChange = (
     updatedData: CertificateData,
     currentSkillsInput = skillsInput,
-    currentAddToVellum = addToVellum
+    currentAddToVellum = addToVellum,
+    currentIssuerDid = activeIssuerDid
   ) => {
     if (onChange) {
       const isDid = Boolean(
         resolvedInfo?.isDid || isDidCkb(updatedData.recipientAddress.trim()) || updatedData.recipientAddress.startsWith('did:ckb:')
       );
-      const canIssueVellum = Boolean(currentAddToVellum && isDid && detectedIssuerDid);
+      const canIssueVellum = Boolean(currentAddToVellum && isDid && currentIssuerDid);
       onChange({
         ...updatedData,
         withVellumClaim: canIssueVellum,
-        issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
+        issuerDid: canIssueVellum ? currentIssuerDid : undefined,
         skills: currentSkillsInput
           ? currentSkillsInput.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
@@ -191,11 +216,11 @@ export function CertificateForm({
 
   // Auto-uncheck Vellum if issuer DID becomes unavailable
   useEffect(() => {
-    if (!detectedIssuerDid && addToVellum) {
+    if (!activeIssuerDid && addToVellum) {
       setAddToVellum(false);
-      notifyChange(formData, skillsInput, false);
+      notifyChange(formData, skillsInput, false, undefined);
     }
-  }, [detectedIssuerDid]);
+  }, [activeIssuerDid]);
 
   useEffect(() => {
     if (onChange) {
@@ -230,7 +255,7 @@ export function CertificateForm({
       customColor: formData.customColor,
       customTitle: formData.customTitle,
       addToVellum,
-      detectedIssuerDid,
+      activeIssuerDid,
     });
 
     // Skip if fields haven't changed
@@ -240,7 +265,7 @@ export function CertificateForm({
       setIsCalculatingCapacity(true);
       try {
         const { previewCertificateMint } = await import('@/lib/credentials');
-        const canIssueVellum = Boolean(addToVellum && isRecipientDid && detectedIssuerDid);
+        const canIssueVellum = Boolean(addToVellum && isRecipientDid && activeIssuerDid);
         const result = await previewCertificateMint(signer as any, {
           clusterId,
           issuerName: clusterName,
@@ -263,7 +288,7 @@ export function CertificateForm({
           expirationDate: formData.expirationDate,
           withVellumClaim: canIssueVellum,
           recipientDid: formData.recipientAddress.startsWith('did:ckb:') ? formData.recipientAddress : undefined,
-          issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
+          issuerDid: canIssueVellum && activeIssuerDid ? activeIssuerDid : undefined,
         });
         setCertCapacity(result.exactCapacity);
         setLastCalculatedHash(fieldHash);
@@ -275,7 +300,7 @@ export function CertificateForm({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash, addToVellum, resolvedInfo, detectedIssuerDid, isRecipientDid]);
+  }, [formData, skillsInput, signer, clusterId, clusterName, lastCalculatedHash, addToVellum, resolvedInfo, activeIssuerDid, isRecipientDid]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -319,7 +344,7 @@ export function CertificateForm({
     e.preventDefault();
     if (!validate()) return;
 
-    const canIssueVellum = Boolean(addToVellum && isRecipientDid && detectedIssuerDid);
+    const canIssueVellum = Boolean(addToVellum && isRecipientDid && activeIssuerDid);
 
     onSubmit({
       ...formData,
@@ -328,7 +353,7 @@ export function CertificateForm({
         ? skillsInput.split(',').map((s) => s.trim()).filter(Boolean)
         : undefined,
       withVellumClaim: canIssueVellum,
-      issuerDid: canIssueVellum && detectedIssuerDid ? detectedIssuerDid : undefined,
+      issuerDid: canIssueVellum && activeIssuerDid ? activeIssuerDid : undefined,
     });
   };
 
@@ -429,12 +454,12 @@ export function CertificateForm({
           {/* Vellum Claim Cell Toggle (when recipient is DID) */}
           {isRecipientDid && (
             <div className="mt-3 space-y-2">
-              {isLoadingIssuerDid ? (
+              {isLoadingIssuerDid || isLoadingIssuerDids ? (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 text-xs text-mid-ash">
                   <Loader2 className="w-4 h-4 animate-spin text-lavender-spark" />
                   <span>Checking issuer DID on CKB...</span>
                 </div>
-              ) : detectedIssuerDid ? (
+              ) : availableIssuerDids.length > 0 ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between p-3 rounded-xl bg-midnight-plum/60 border border-fog-line/20 hover:border-lavender-spark/30 transition-colors">
                     <div className="flex items-center gap-2.5">
@@ -461,12 +486,40 @@ export function CertificateForm({
                     </span>
                   </div>
                   {addToVellum && (
-                    <div className="flex items-center gap-2 text-xs text-lavender-spark bg-lavender-spark/10 p-2.5 rounded-lg border border-lavender-spark/20">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>
-                        Issuer DID: <strong className="font-mono text-bone-white">{detectedIssuerDid}</strong> (Detected from connected wallet)
-                      </span>
-                    </div>
+                    availableIssuerDids.length > 1 ? (
+                      <div className="space-y-1.5 p-3 rounded-xl bg-midnight-plum/70 border border-lavender-spark/30">
+                        <label htmlFor="issuerDidSelect" className="block text-xs font-medium text-ash-veil">
+                          Select Issuer DID
+                        </label>
+                        <select
+                          id="issuerDidSelect"
+                          aria-label="Select Issuer DID"
+                          value={activeIssuerDid}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedIssuerDid(val);
+                            notifyChange(formData, skillsInput, addToVellum, val);
+                          }}
+                          className="w-full px-3 py-2 rounded-lg bg-midnight border border-fog-line/20 text-bone-white font-mono text-xs focus:ring-2 focus:ring-lavender-spark/40 focus:outline-none"
+                        >
+                          {availableIssuerDids.map((did) => (
+                            <option key={did} value={did}>
+                              {did}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-mid-ash">
+                          Your wallet owns {availableIssuerDids.length} DIDs. Select the authority to issue under.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-lavender-spark bg-lavender-spark/10 p-2.5 rounded-lg border border-lavender-spark/20">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>
+                          Issuer DID: <strong className="font-mono text-bone-white">{activeIssuerDid}</strong> (Detected from connected wallet)
+                        </span>
+                      </div>
+                    )
                   )}
                 </div>
               ) : (
@@ -493,11 +546,19 @@ export function CertificateForm({
                   </div>
                   <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
                     <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <div>
+                    <div className="space-y-1.5">
                       <p className="font-medium text-amber-300">Issuer DID required for Vellum</p>
-                      <p className="mt-0.5 text-amber-200/80">
-                        Your connected wallet has no registered DID on CKB. To issue Vellum Claim Cells, your wallet must own an on-chain CKB DID.
+                      <p className="mt-0.5 text-amber-200/80 leading-relaxed">
+                        Your connected wallet has no registered DID on CKB. Standard Spore certificates can still be minted without a DID.
                       </p>
+                      <a
+                        href="https://dashboard.usevellum.xyz"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-lavender-spark hover:underline font-medium"
+                      >
+                        Register did:ckb on Vellum →
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -781,7 +842,7 @@ export function CertificateForm({
             </span>
           </div>
         )}
-        {addToVellum && detectedIssuerDid && (
+        {addToVellum && activeIssuerDid && (
           <div className="text-xs text-purple-400 mt-1">
             Claim Cell: +350 CKB
           </div>
