@@ -63,6 +63,29 @@ describe('Cluster Service', () => {
       expect(cluster.creatorAddress).toBeDefined();
       expect(cluster.createdAt).toBeDefined();
     });
+
+    // Test: Support optional issuerDid in ClusterConfig and Cluster
+    it('should support optional issuerDid in ClusterConfig and Cluster', () => {
+      const configWithDid: ClusterConfig = {
+        name: 'University of CKB',
+        description: 'Accredited institution',
+        issuerDid: 'did:ckb:qquniversity0000000000000000',
+      };
+
+      expect(configWithDid.issuerDid).toBe('did:ckb:qquniversity0000000000000000');
+
+      const clusterWithDid: Cluster = {
+        id: 'cluster-456',
+        clusterId: 'cluster-456',
+        name: 'University of CKB',
+        description: 'Accredited institution',
+        creatorAddress: 'ckt1q9gry5zgxmpjnmhrp4raggde4gf2vqqyzd5x3lt7pf5m8c2kzwfxnsvpq',
+        createdAt: '2026-10-11T00:00:00Z',
+        issuerDid: 'did:ckb:qquniversity0000000000000000',
+      };
+
+      expect(clusterWithDid.issuerDid).toBe('did:ckb:qquniversity0000000000000000');
+    });
   });
 
   describe('Cluster ID Generation', () => {

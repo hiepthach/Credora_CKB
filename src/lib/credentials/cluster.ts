@@ -37,6 +37,7 @@ export async function createCluster(params: {
       description: config.description,
       websiteUrl: config.websiteUrl || '',
       contactEmail: config.contactEmail || '',
+      issuerDid: config.issuerDid || '',
     };
 
     try {
@@ -61,6 +62,7 @@ export async function createCluster(params: {
         description: config.description,
         websiteUrl: config.websiteUrl,
         contactEmail: config.contactEmail,
+        issuerDid: config.issuerDid,
         creatorAddress,
         createdAt: new Date().toISOString(),
       };
@@ -123,6 +125,7 @@ export async function getCluster(clusterId: string, client?: unknown): Promise<C
           description: meta.description || found.clusterData.description || '',
           websiteUrl: meta.websiteUrl || '',
           contactEmail: meta.contactEmail || '',
+          issuerDid: meta.issuerDid || undefined,
           creatorAddress: meta.creatorAddress || '',
           createdAt: meta.createdAt || new Date().toISOString(),
         };
@@ -214,6 +217,7 @@ export async function getProviderClusters(
               description: meta.description || clusterData.description || '',
               websiteUrl: meta.websiteUrl || '',
               contactEmail: meta.contactEmail || '',
+              issuerDid: meta.issuerDid || undefined,
               creatorAddress: address,
               createdAt: meta.createdAt || new Date().toISOString(),
             };
