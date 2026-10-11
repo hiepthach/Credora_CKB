@@ -4,6 +4,8 @@ import {
   formatRecipientIdentifier,
   findDidByLock,
   findIssuerDid,
+  listDidsByLock,
+  listIssuerDids,
 } from "@/lib/did";
 import { listDidCkbsByLock } from "@ckb-ccc/did-ckb";
 
@@ -130,3 +132,83 @@ describe("findIssuerDid", () => {
     expect(did).toBeNull();
   });
 });
+
+describe("listDidsByLock", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns an array of DID strings when records exist", async () => {
+    const mockClient = {} as any;
+    const mockLock = { codeHash: "0x123", hashType: "type", args: "0x" } as any;
+
+    vi.mocked(listDidCkbsByLock).mockResolvedValueOnce([
+      { did: "did:ckb:qqdid1111111111111111111111111" } as any,
+      { did: "did:ckb:qqdid2222222222222222222222222" } as any,
+    ]);
+
+    const dids = await listDidsByLock(mockClient, mockLock);
+    expect(dids).toEqual([
+      "did:ckb:qqdid1111111111111111111111111",
+      "did:ckb:qqdid2222222222222222222222222",
+    ]);
+  });
+
+  it("returns an empty array when no records exist", async () => {
+    const mockClient = {} as any;
+    const mockLock = { codeHash: "0x123", hashType: "type", args: "0x" } as any;
+
+    vi.mocked(listDidCkbsByLock).mockResolvedValueOnce([]);
+
+    const dids = await listDidsByLock(mockClient, mockLock);
+    expect(dids).toEqual([]);
+  });
+
+  it("handles errors gracefully and returns empty array", async () => {
+    const mockClient = {} as any;
+    const mockLock = { codeHash: "0x123", hashType: "type", args: "0x" } as any;
+
+    vi.mocked(listDidCkbsByLock).mockRejectedValueOnce(new Error("RPC failure"));
+
+    const dids = await listDidsByLock(mockClient, mockLock);
+    expect(dids).toEqual([]);
+  });
+});
+
+describe("listIssuerDids", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("extracts lock from signer and returns array of DIDs", async () => {
+    const mockLock = { codeHash: "0xabc", hashType: "type", args: "0x999" };
+    const mockSigner = {
+      client: {} as any,
+      getRecommendedAddressObj: vi.fn().mockResolvedValue({
+        script: mockLock,
+      }),
+    } as any;
+
+    vi.mocked(listDidCkbsByLock).mockResolvedValueOnce([
+      { did: "did:ckb:qqissuer10000000000000000000" } as any,
+      { did: "did:ckb:qqissuer20000000000000000000" } as any,
+    ]);
+
+    const dids = await listIssuerDids(mockSigner);
+    expect(dids).toEqual([
+      "did:ckb:qqissuer10000000000000000000",
+      "did:ckb:qqissuer20000000000000000000",
+    ]);
+  });
+
+  it("returns empty array if signer throws", async () => {
+    const mockSigner = {
+      client: {} as any,
+      getRecommendedAddressObj: vi.fn().mockRejectedValue(new Error("Signer failure")),
+    } as any;
+
+    const dids = await listIssuerDids(mockSigner);
+    expect(dids).toEqual([]);
+  });
+});
+

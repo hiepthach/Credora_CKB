@@ -9,21 +9,47 @@ import {
 export * from "./types";
 
 /**
+ * Look up all registered did:ckb identifiers owned by a lock script
+ */
+export async function listDidsByLock(
+  client: ccc.Client,
+  lock: ccc.ScriptLike
+): Promise<string[]> {
+  try {
+    const records = await listDidCkbsByLock({ client, lock });
+    if (!records || records.length === 0) return [];
+    return records
+      .map((r) => r.did)
+      .filter((did): did is string => Boolean(did && typeof did === "string"));
+  } catch (err) {
+    console.warn("Failed to list DIDs by lock:", err);
+    return [];
+  }
+}
+
+/**
  * Look up whether a lock script owns any registered did:ckb on-chain
  */
 export async function findDidByLock(
   client: ccc.Client,
   lock: ccc.ScriptLike
 ): Promise<string | null> {
+  const dids = await listDidsByLock(client, lock);
+  return dids.length > 0 ? dids[0] : null;
+}
+
+/**
+ * Look up all registered did:ckb identifiers owned by the connected signer
+ */
+export async function listIssuerDids(
+  signer: ccc.Signer
+): Promise<string[]> {
   try {
-    const records = await listDidCkbsByLock({ client, lock });
-    if (records && records.length > 0 && records[0].did) {
-      return records[0].did;
-    }
-    return null;
+    const addressObj = await signer.getRecommendedAddressObj();
+    return await listDidsByLock(signer.client, addressObj.script);
   } catch (err) {
-    console.warn("Failed to lookup DID by lock:", err);
-    return null;
+    console.warn("Failed to list issuer DIDs for signer:", err);
+    return [];
   }
 }
 
@@ -33,13 +59,8 @@ export async function findDidByLock(
 export async function findIssuerDid(
   signer: ccc.Signer
 ): Promise<string | null> {
-  try {
-    const addressObj = await signer.getRecommendedAddressObj();
-    return await findDidByLock(signer.client, addressObj.script);
-  } catch (err) {
-    console.warn("Failed to lookup issuer DID for signer:", err);
-    return null;
-  }
+  const dids = await listIssuerDids(signer);
+  return dids.length > 0 ? dids[0] : null;
 }
 
 /**
