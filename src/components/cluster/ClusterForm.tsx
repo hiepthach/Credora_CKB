@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import type { ClusterConfig } from '@/types';
+import { useWallet } from '@/hooks/useWallet';
 
 interface ClusterFormProps {
   initialValues?: Partial<ClusterConfig>;
@@ -19,10 +20,12 @@ export function ClusterForm({
   loading = false,
   mode = 'create',
 }: ClusterFormProps) {
+  const { issuerDids = [] } = useWallet();
   const [name, setName] = useState(initialValues.name || '');
   const [description, setDescription] = useState(initialValues.description || '');
   const [websiteUrl, setWebsiteUrl] = useState(initialValues.websiteUrl || '');
   const [contactEmail, setContactEmail] = useState(initialValues.contactEmail || '');
+  const [issuerDid, setIssuerDid] = useState(initialValues.issuerDid || '');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -63,6 +66,7 @@ export function ClusterForm({
       description: description.trim(),
       websiteUrl: websiteUrl.trim() || undefined,
       contactEmail: contactEmail.trim() || undefined,
+      issuerDid: issuerDid.trim() || undefined,
     });
   };
 
@@ -117,6 +121,35 @@ export function ClusterForm({
         onChange={setContactEmail}
         error={errors.contactEmail}
       />
+
+      {issuerDids.length > 0 ? (
+        <div className="space-y-1.5 p-3.5 rounded-xl bg-midnight-plum/60 border border-fog-line/15">
+          <label htmlFor="clusterIssuerDid" className="block text-xs font-medium text-ash-veil">
+            Associated Issuer DID (Optional)
+          </label>
+          <select
+            id="clusterIssuerDid"
+            aria-label="Associated Issuer DID"
+            value={issuerDid}
+            onChange={(e) => setIssuerDid(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-midnight border border-fog-line/20 text-bone-white font-mono text-xs focus:ring-2 focus:ring-lavender-spark/40 focus:outline-none"
+          >
+            <option value="">None (Standard Spore Cluster)</option>
+            {issuerDids.map((did) => (
+              <option key={did} value={did}>
+                {did}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-mid-ash">
+            Bind this course to a registered CKB DID. Certificates issued in this cluster will inherit this authority identity.
+          </p>
+        </div>
+      ) : (
+        <p className="text-[11px] text-mid-ash italic">
+          Tip: If your wallet owns a did:ckb on Vellum, you can bind it to this institution to enable automatic Vellum reputation indexing.
+        </p>
+      )}
 
       <div className="flex gap-3 pt-4 border-t border-fog-line/10">
         <Button type="button" variant="secondary" onClick={onCancel} className="text-xs">
