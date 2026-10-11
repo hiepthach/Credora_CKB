@@ -5,6 +5,7 @@ export interface ClusterConfig {
   contactEmail?: string;
   avatarUrl?: string;
   bannerUrl?: string;
+  issuerDid?: string;
 }
 
 export interface Cluster extends ClusterConfig {
@@ -13,6 +14,7 @@ export interface Cluster extends ClusterConfig {
   creatorAddress: string;
   createdAt: string;
   updatedAt?: string;
+  issuerDid?: string;
 }
 
 export interface ClusterWithCount extends Cluster {

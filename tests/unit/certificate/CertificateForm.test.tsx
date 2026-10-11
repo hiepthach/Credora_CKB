@@ -529,6 +529,74 @@ describe('CertificateForm Vellum Claim Cell Toggle', () => {
     expect(ctaLink).toBeInTheDocument();
     expect(ctaLink).toHaveAttribute('href', 'https://dashboard.usevellum.xyz');
   });
+
+  it('pre-selects clusterIssuerDid when provided and owned by wallet', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDids: [
+        'did:ckb:qqother0000000000000000',
+        'did:ckb:qqclusterbound000000000000',
+      ],
+      issuerDid: 'did:ckb:qqother0000000000000000',
+      isLoadingIssuerDid: false,
+      isLoadingIssuerDids: false,
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        clusterIssuerDid="did:ckb:qqclusterbound000000000000"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    const selectDropdown = screen.getByRole('combobox', { name: /Select Issuer DID/i }) as HTMLSelectElement;
+    expect(selectDropdown.value).toBe('did:ckb:qqclusterbound000000000000');
+  });
+
+  it('displays warning when clusterIssuerDid is not controlled by connected wallet', async () => {
+    const { useWallet } = vi.mocked(await import('@/hooks/useWallet'));
+    useWallet.mockReturnValue({
+      client: null,
+      address: 'ckt1qzda0cr08m85hc8j9ngns49pn30ep606x4qp8nd500w494ps2qscq2fnsqv',
+      signer: null,
+      isConnected: true,
+      isLoadingAddress: false,
+      open: vi.fn(),
+      issuerDids: ['did:ckb:qqwalletdid0000000000000000'],
+      issuerDid: 'did:ckb:qqwalletdid0000000000000000',
+      isLoadingIssuerDid: false,
+      isLoadingIssuerDids: false,
+    } as any);
+
+    render(
+      <CertificateForm
+        clusterId="test_cluster"
+        clusterName="University of CKB"
+        clusterIssuerDid="did:ckb:qqunownedcluster00000000000"
+        defaultRecipientAddress="did:ckb:abcdefghijklmnopqrstuvwxyz234567"
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByLabelText(/Add to Vellum \(Claim Cell\)/i);
+    fireEvent.click(checkbox);
+
+    expect(screen.getByText(/Institution DID mismatch/i)).toBeInTheDocument();
+    expect(screen.getByText(/did:ckb:qqunownedcluster00000000000/i)).toBeInTheDocument();
+  });
 });
+
 
 

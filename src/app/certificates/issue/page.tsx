@@ -356,6 +356,7 @@ function IssuePageContent() {
                   <CertificateForm
                     clusterId={activeClusterId || ''}
                     clusterName={cluster.name}
+                    clusterIssuerDid={cluster.issuerDid}
                     defaultLayout={queryLayout || 'classic'}
                     defaultTheme={queryTheme || 'blue'}
                     onChange={setLiveFormData}
